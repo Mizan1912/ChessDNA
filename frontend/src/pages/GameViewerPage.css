@@ -3,6 +3,14 @@
   margin: 0.75rem 0 1.25rem;
 }
 
+.your-color {
+  color: var(--color-text);
+}
+
+.color-name {
+  text-transform: capitalize;
+}
+
 .viewer-meta a {
   margin-left: 0.5rem;
 }

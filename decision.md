@@ -6,6 +6,22 @@ here.
 
 ---
 
+## D-022 — Show which colour the player had, in the list and the viewer
+Date: 2026-09-20
+Phase: 1/2 (games list + viewer, retroactive addition)
+Decided by: user
+
+What: A small coloured dot (white/black, plain CSS circle, no emoji) plus "you played white/black"
+text now appears in the game viewer's meta line, and the same dot appears as a "You" column in the
+games list table. Shared `.color-dot` styling lives in `index.css` since both pages use it.
+Why: user pointed out there was no way to tell which side you played without opening the game and
+reading the board orientation — a real gap, since the tilt/clock findings all talk about "you"
+without ever showing which pieces were yours in the underlying games.
+Alternatives considered: none — straightforward gap once named.
+Affects: `frontend/src/index.css`, `GameViewerPage.jsx`/`.css`, `GamesListPage.jsx`.
+
+---
+
 ## D-021 — Evidence links jump to the exact position; move list shows time per move
 Date: 2026-09-20
 Phase: 2

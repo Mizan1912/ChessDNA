@@ -82,6 +82,7 @@ export default function GamesListPage({
               <thead>
                 <tr>
                   <th>Date</th>
+                  <th>You</th>
                   <th>Opponent</th>
                   <th>Result</th>
                   <th>Time control</th>
@@ -96,6 +97,9 @@ export default function GamesListPage({
                     onMouseLeave={() => setPreviewFen(STARTING_FEN)}
                   >
                     <td>{formatDate(game.playedAt)}</td>
+                    <td>
+                      <span className={`color-dot ${game.userColor}`} />
+                    </td>
                     <td>{game.opponentName}</td>
                     <td>{game.result}</td>
                     <td>{game.timeClass}</td>

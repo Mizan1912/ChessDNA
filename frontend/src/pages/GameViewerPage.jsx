@@ -56,7 +56,11 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1 }) 
       <button onClick={onBack}>Back to list</button>
 
       <p className="viewer-meta">
-        vs {game.opponentName} — {game.result} — {game.timeClass}
+        <span className="your-color">
+          <span className={`color-dot ${game.userColor}`} /> you played{" "}
+          <span className="color-name">{game.userColor}</span>
+        </span>{" "}
+        — vs {game.opponentName} — {game.result} — {game.timeClass}
         <a href={game.url} target="_blank" rel="noreferrer">
           view on Chess.com
         </a>

@@ -106,3 +106,22 @@ th {
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* Which colour the player had in a game — shared by the games list and the
+   viewer, so it's defined once here rather than duplicated per page. */
+.color-dot {
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  border: 1px solid var(--color-border);
+  margin-right: 0.3em;
+}
+
+.color-dot.white {
+  background: #e9e6df;
+}
+
+.color-dot.black {
+  background: #1a1a1a;
+}
