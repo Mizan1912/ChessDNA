@@ -6,6 +6,23 @@ here.
 
 ---
 
+## D-016 — Fourth living doc: code-flow.md, for internals not user journey
+Date: 2026-09-19
+Phase: 2
+Decided by: user
+
+What: Added `code-flow.md` at the repo root, alongside `decision.md`/`flow.md`/`rnd.md`. It explains
+how the code works internally (which file calls which, in what order, in plain language) — separate
+from `flow.md`, which stays focused on what the user sees and clicks. Rewritten each phase like
+`flow.md`, not appended to.
+Why: user wants to understand the codebase at a lower level than "what screen shows what," without
+`flow.md` turning into two different documents mashed together.
+Alternatives considered: folding this into `flow.md` as a new section — rejected, user explicitly
+asked for `flow.md` to stay as-is and for this to be separate.
+Affects: every phase from here on updates four living docs, not three.
+
+---
+
 ## D-015 — Shared GameEvidenceList component for the evidence rule
 Date: 2026-09-19
 Phase: 2
