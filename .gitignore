@@ -1,0 +1,19 @@
+# dependencies
+node_modules/
+
+# env files - never commit real secrets
+.env
+.env.local
+.env.*.local
+
+# build output
+frontend/dist/
+.vercel/
+
+# editor / os
+.DS_Store
+Thumbs.db
+.claude/settings.local.json
+
+# logs
+*.log
