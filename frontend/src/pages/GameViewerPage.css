@@ -1,0 +1,61 @@
+.viewer-meta {
+  color: var(--color-text-muted);
+  margin: 0.75rem 0 1.25rem;
+}
+
+.viewer-meta a {
+  margin-left: 0.5rem;
+}
+
+.viewer-layout {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.board-panel {
+  width: 420px;
+  padding: 0.75rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.moves-panel {
+  flex: 1;
+  min-width: 220px;
+}
+
+.move-controls {
+  display: flex;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.move-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 420px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+}
+
+.move-list li {
+  display: inline-block;
+}
+
+.move-list button {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0.35rem 0.5rem;
+  font-family: var(--font-mono);
+}
+
+.move-list button.active {
+  background: var(--color-accent);
+  color: var(--color-bg);
+}

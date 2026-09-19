@@ -17,3 +17,6 @@ Thumbs.db
 
 # logs
 *.log
+
+# agent scratch space (screenshots, throwaway scripts used for self-verification)
+.scratch/

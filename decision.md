@@ -6,6 +6,105 @@ here.
 
 ---
 
+## D-011 — Phase 1 closes with Chess.com only; Lichess parked
+Date: 2026-09-19
+Phase: 1
+Decided by: user
+
+What: Phase 1 is considered done with only Chess.com wired up. Lichess support (API client,
+normalizer, and a platform picker in the form) is parked, not built.
+Why: user chose to move to Phase 2 (Tilt + Clock) rather than spend more time on Phase 1 first —
+Phase 2 only needs the games already fetchable from Chess.com.
+Alternatives considered: build Lichess now to match Phase 1's original scope exactly — user declined.
+Affects: `GamesListPage.jsx` has no platform picker yet; `lib/lichessApi.js` doesn't exist yet.
+
+---
+
+## D-010 — Games list redesigned: board as visual anchor, hover preview, flattened toolbar
+Date: 2026-09-19
+Phase: 1
+Decided by: agent
+Needs review: yes
+
+What: After the first design pass still read as generic, the games list page was restructured:
+the username/slider/button form is now a slim bottom-bordered toolbar (not a bordered "card"
+floating on empty background — that was still the exact look the doc warns against, just recoloured
+dark), and a chess board now sits beside the table at all times — starting position when idle, and
+the hovered game's final position when hovering a row. This makes the board do real work (a quick
+visual signature of how a game ended) instead of only appearing after a click, and gives the screen
+an immediate "this is a chess tool" read per the design direction's one-second test.
+Why: user said the first pass still felt AI-generated. Verified visually via Playwright screenshots
+(with Chess.com responses mocked from real fetched data — the live API blocks headless/automated
+browsers via Cloudflare, see the watch item in rnd.md) rather than guessing blind.
+Alternatives considered: keep the card but restyle its colours only — rejected, the doc's actual
+complaint is about the "card floating on flat background" shape, not the colour choice.
+Affects: `frontend/src/pages/GamesListPage.jsx`, `GamesListPage.css`.
+
+---
+
+## D-009 — Design direction applied now, not deferred; plain CSS files, no framework
+Date: 2026-09-19
+Phase: 1
+Decided by: user
+
+What: Replaced the default Vite scaffold styling (purple/indigo accents, centred layout — exactly
+the generic look the build doc warns against) with the project's actual design system: dark by
+default, one accent colour (`--color-accent`, a wood/amber tone) used for interactive states only,
+a serif heading font (Fraunces, loaded free from Google Fonts) paired with a plain system-font
+body, tabular figures for numbers, and a dense (not airy) table/list layout. Glassmorphism (blur)
+is used only on the sticky app header, where real content scrolls underneath it — nowhere else.
+Styling is plain CSS, one file per component/page, imported directly — no Tailwind or CSS-in-JS
+library added.
+Why: user pointed out the UI looked bad after Phase 1's first working slice. The build doc is
+explicit that Phase 1's screen is where the design direction should be established, not deferred —
+that was my mistake, not a "later phase" item. Plain CSS avoids adding a dependency the doc's tech
+stack table didn't already call for.
+Alternatives considered: Tailwind (fast to write, but a new dependency not in the locked stack;
+would need its own decision entry to add) — deferred unless plain CSS becomes unwieldy.
+Affects: `frontend/src/index.css` (full rewrite), `App.jsx`/`App.css`, `GamesListPage.jsx`/`.css`,
+`GameViewerPage.jsx`/`.css`, `index.html` (font link).
+
+---
+
+## D-008 — Chess.com base URL moved to env var; game count is a UI slider, not a constant
+Date: 2026-09-19
+Phase: 1
+Decided by: user
+
+What: Two fixes to Phase 1 slice 1:
+1. `VITE_CHESSCOM_API_BASE_URL` added to root `.env.example`/`.env`, read via `import.meta.env` in
+   `lib/chessComApi.js`, falling back to the real endpoint if unset. `vite.config.js` now points
+   `envDir` at the repo root so `/frontend` and the future `/api` functions share one `.env` file
+   instead of needing two kept in sync.
+2. The hardcoded `GAMES_TO_FETCH = 50` was removed. `GamesListPage` now has a range slider
+   (10-100, step 10, defaults to 50) so the user picks how many games to pull per fetch.
+Why: user caught both as violations of the project's "no hardcode, use envs" rule — the API base
+URL is external config that should be overridable without a code change, and the game count is a
+per-request user choice, not a fixed limit.
+Alternatives considered: making game count an env var too — rejected, it's a UI-level user
+preference each time they fetch, not a deployment-level config value.
+Affects: `frontend/vite.config.js`, `frontend/src/lib/chessComApi.js`, `frontend/src/pages/GamesListPage.jsx`,
+root `.env.example`.
+
+---
+
+## D-007 — Chess.com wired up before Lichess in Phase 1
+Date: 2026-09-19
+Phase: 1
+Decided by: agent
+Needs review: yes
+
+What: Build and prove the game-fetching flow against Chess.com's API first; add Lichess once that
+path works end to end.
+Why: Chess.com's REST API (monthly archive endpoints, plain JSON) is simpler to get a first working
+slice from than Lichess's NDJSON stream. User didn't have a preference when asked, said proceed.
+Alternatives considered: Lichess first, or both at once — both first would double the surface area
+before anything is proven working.
+Affects: `lib/chessComApi.js` built now, `lib/lichessApi.js` and the platform-normalizing layer come
+right after.
+
+---
+
 ## D-006 — src/ skeleton: pages, components, lib, hooks
 Date: 2026-09-19
 Phase: 0
@@ -95,6 +194,9 @@ Affects: nothing pushes anywhere until the user explicitly asks.
 
 ## Parked
 
-- **Vercel deployment** (belongs to: whenever the user is ready, likely revisited at end of Phase 0
-  or start of Phase 1) — scaffold and `npm run build` confirmed working locally; deployment itself
-  paused per D-005.
+- **Vercel deployment** (belongs to: whenever the user is ready) — scaffold and `npm run build`
+  confirmed working locally; deployment itself paused per D-005.
+- **Lichess support** (belongs to: whenever it's picked back up, likely before Phase 3 so saved DNA
+  covers both platforms) — parked per D-011. `lib/chessComApi.js` and `normalizeGame.js` were
+  written with the platform split in mind (see D-007), so adding `lib/lichessApi.js` +
+  `normalizeLichessGame()` later should slot in without reworking the Chess.com side.
