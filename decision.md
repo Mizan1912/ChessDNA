@@ -6,6 +6,28 @@ here.
 
 ---
 
+## D-017 — Responsive breakpoint at 720px added to every two-column layout
+Date: 2026-09-19
+Phase: 2
+Decided by: user
+
+What: The games list, game viewer, and (implicitly, no two-column layout there) tilt page all had a
+fixed-width board/side panel with no way to shrink or stack. Below ~720px wide (phones, most
+portrait tablets) this caused the main content to be squeezed into a sliver and visually overlap the
+board — confirmed as a real bug via a mobile-viewport screenshot, not just a style complaint. Added
+a `@media (max-width: 720px)` rule to `GamesListPage.css` and `GameViewerPage.css` that switches
+each `flex` row to `flex-direction: column` and lets the board panel go full-width, plus a
+`.games-table-wrapper` with `overflow-x: auto` as a safety net if a table ever gets wider than the
+screen. Also hid the header tagline under 480px to keep the header on one line.
+Why: user specifically flagged mobile as broken, in addition to laptop. This wasn't optional
+polish — the fetch form was genuinely unusable on a phone before this fix (a button could be
+overlapped by the board and become unclickable).
+Alternatives considered: none — this is a correctness fix, not a design choice with real
+alternatives.
+Affects: `GamesListPage.css`/`.jsx`, `GameViewerPage.css`, `App.css`.
+
+---
+
 ## D-016 — Fourth living doc: code-flow.md, for internals not user journey
 Date: 2026-09-19
 Phase: 2

@@ -15,10 +15,13 @@
 
 .board-panel {
   width: 420px;
+  max-width: 100%;
+  flex-shrink: 0;
   padding: 0.75rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
+  box-sizing: border-box;
 }
 
 .moves-panel {
@@ -26,9 +29,28 @@
   min-width: 220px;
 }
 
+/* Same reasoning as the games-list layout: stack instead of squeezing the
+   move list into a sliver beside a fixed-width board. */
+@media (max-width: 720px) {
+  .viewer-layout {
+    flex-direction: column;
+  }
+
+  .board-panel {
+    width: 100%;
+    margin: 0 auto;
+  }
+
+  .moves-panel {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
 .move-controls {
   display: flex;
   gap: 0.4rem;
+  flex-wrap: wrap;
   margin-bottom: 0.75rem;
 }
 

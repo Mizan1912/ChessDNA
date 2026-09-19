@@ -16,6 +16,25 @@
   top: 4.5rem;
 }
 
+/* Below this width there isn't room for two columns side by side — stack
+   instead of squeezing the form into a sliver next to a fixed-width board. */
+@media (max-width: 720px) {
+  .list-layout {
+    flex-direction: column;
+  }
+
+  .list-board-panel {
+    width: 100%;
+    max-width: 360px;
+    margin: 0 auto;
+    position: static;
+  }
+}
+
+.games-table-wrapper {
+  overflow-x: auto;
+}
+
 .board-caption {
   margin-top: 0.5rem;
   font-size: 0.8rem;

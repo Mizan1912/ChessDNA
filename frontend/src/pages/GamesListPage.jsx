@@ -74,31 +74,33 @@ export default function GamesListPage({
         {status === "done" && games.length === 0 && <p>No games found for this player.</p>}
 
         {games.length > 0 && (
-          <table className="games-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Opponent</th>
-                <th>Result</th>
-                <th>Time control</th>
-              </tr>
-            </thead>
-            <tbody>
-              {games.map((game) => (
-                <tr
-                  key={game.id}
-                  onClick={() => onOpenGame(game)}
-                  onMouseEnter={() => setPreviewFen(finalPositionFen(game.pgn))}
-                  onMouseLeave={() => setPreviewFen(STARTING_FEN)}
-                >
-                  <td>{formatDate(game.playedAt)}</td>
-                  <td>{game.opponentName}</td>
-                  <td>{game.result}</td>
-                  <td>{game.timeClass}</td>
+          <div className="games-table-wrapper">
+            <table className="games-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Opponent</th>
+                  <th>Result</th>
+                  <th>Time control</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {games.map((game) => (
+                  <tr
+                    key={game.id}
+                    onClick={() => onOpenGame(game)}
+                    onMouseEnter={() => setPreviewFen(finalPositionFen(game.pgn))}
+                    onMouseLeave={() => setPreviewFen(STARTING_FEN)}
+                  >
+                    <td>{formatDate(game.playedAt)}</td>
+                    <td>{game.opponentName}</td>
+                    <td>{game.result}</td>
+                    <td>{game.timeClass}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 
