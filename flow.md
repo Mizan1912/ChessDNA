@@ -44,12 +44,17 @@ currently on. No routing library is in use yet — the app is four screens toggl
 `App.jsx`. `react-router` (locked in the tech stack) will be introduced once there are enough
 screens that back/forward browser navigation and shareable URLs actually matter.
 
-5. **Signing in** — top-right of the header shows a "Sign in with Google" button when signed out, or
-   your name plus a "Sign out" button when signed in. Signing in doesn't gate anything — the app
-   works exactly the same as a guest. What signing in actually does: your Chess.com username gets
-   saved, so on your *next* visit (a real return visit, cookie already set) the app automatically
-   fills it in and fetches your games without you typing anything. If you type a username as a guest
-   and *then* sign in, that username is carried over to your new account instead of being lost.
+5. **Onboarding (first screen, first-time visitors only)** — before you've either signed in or
+   picked a guest username, you see a dedicated screen: "Sign in with Google" (saves your username
+   permanently) or type a Chess.com username and "Continue as guest" (nothing saved, asked again
+   next visit). If you're signed in but haven't saved a username yet (fresh account, or a new
+   device), it skips straight to just asking for the username, greeting you by name. Once you have a
+   saved username, this screen never shows again — you land straight in the app with your games
+   already loading.
+6. **Signing in later** — the header still shows "Sign in with Google" (if you started as a guest)
+   or your name plus "Sign out" (once signed in) even after onboarding. Signing in doesn't gate
+   anything — the app works exactly the same as a guest. If you'd already typed a username as a
+   guest before signing in, it's carried over to your new account instead of being lost.
 
 ## 1a. What's saved, and where
 
@@ -113,7 +118,8 @@ Phase 4.
 | `/frontend/src/pages/ClockPage.jsx` + `.css` | Feature 3 (partial — see D-020): the four clock findings above, evidence-linked. |
 | `/frontend/src/components/TimeClassTabs.jsx` + `.css` | Shared bullet/blitz/rapid/daily filter, rendered once in `App.jsx`, applies to every page. |
 | `/frontend/src/components/GoogleSignInButton.jsx` | Wraps Google Identity Services' own button; calls back with the credential to send to `/server`. |
-| `/frontend/src/hooks/useAuth.js` | Who's signed in — checks for an existing session on load, exposes `signIn`/`signOut`. |
+| `/frontend/src/hooks/useAuth.js` | Who's signed in — checks for an existing session on load, exposes `signIn`/`signOut`/`updateChessComUsername`. |
+| `/frontend/src/pages/OnboardingPage.jsx` + `.css` | First-time screen: sign in, or type a username and continue as guest; or (if already signed in) just the username step. |
 | `/frontend/src/lib/backendApi.js` | All calls to `/server` (sign-in, sign-out, `/api/me`, saving the Chess.com username). |
 | `/server` | Standalone Express backend (see D-027 — chosen over Vercel functions so it can be hosted independently). Its own `package.json`, run with `npm run dev` inside `/server`. |
 | `/server/index.js` | Express app setup, CORS, cookie parsing, route wiring. |

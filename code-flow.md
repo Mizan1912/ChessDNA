@@ -230,6 +230,31 @@ involved for the first time. Here's the whole trip, end to end:
    then sign in, `App.jsx` saves that typed username to your new account right away (`PUT
    /api/profile`) instead of only saving on the next manual fetch.
 
+## 4d. The onboarding screen
+
+**Files involved:** `pages/OnboardingPage.jsx` → `App.jsx`
+
+`App.jsx` computes one boolean, `showOnboarding`, from three pieces of state: has the initial
+session check finished (`auth.checkedSession`), has onboarding already been dismissed this visit
+(`onboardingDismissed`), and does the signed-in user (if any) already have a saved username
+(`auth.user?.chessComUsername`). If all three say "not yet handled," `App.jsx` renders
+`OnboardingPage` instead of the normal app shell — no header, no tabs, just the onboarding screen.
+
+`OnboardingPage` itself doesn't know about any of that logic — it just renders one of two shapes
+based on a single `needsUsernameOnly` prop (true when someone's already signed in but has no saved
+username) and calls back to whichever handler fits what the person did:
+
+- Typed a username and clicked "Continue as guest" → `onGuestContinue(username)` → `App.jsx` sets
+  it as the active username, fetches games, and marks onboarding dismissed for this visit.
+- Clicked "Sign in with Google" → `onSignInCredential(credential, whateverWasTypedSoFar)`. This one
+  is slightly more involved: after Google confirms who they are, if they already had a saved
+  username (signing in on a new device, say) that's used immediately; otherwise, if they'd typed
+  something in the guest field before deciding to sign in instead, that gets saved as their
+  username; if neither, `showOnboarding` stays true, but now `auth.user` is set, so it naturally
+  falls into the "needs username only" shape on the next render.
+- On the "needs username only" shape, submitting the form calls `onUsernameSubmit(username)`
+  directly — no guest option shown, since they're already signed in.
+
 ## 5. Showing evidence for a finding
 
 **Files involved:** `components/GameEvidenceList.jsx`

@@ -26,5 +26,11 @@ export function useAuth() {
     setUser(null);
   }
 
-  return { user, checkedSession, signIn, signOut };
+  // After the onboarding screen saves a username for a freshly-signed-in
+  // user, this keeps local state in sync without waiting for a re-fetch.
+  function updateChessComUsername(chessComUsername) {
+    setUser((current) => (current ? { ...current, chessComUsername } : current));
+  }
+
+  return { user, checkedSession, signIn, signOut, updateChessComUsername };
 }

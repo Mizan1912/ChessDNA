@@ -3,6 +3,7 @@ import GamesListPage from "./pages/GamesListPage";
 import GameViewerPage from "./pages/GameViewerPage";
 import TiltPage from "./pages/TiltPage";
 import ClockPage from "./pages/ClockPage";
+import OnboardingPage from "./pages/OnboardingPage";
 import TimeClassTabs from "./components/TimeClassTabs";
 import GoogleSignInButton from "./components/GoogleSignInButton";
 import { useFetchedGames } from "./hooks/useFetchedGames";
@@ -25,11 +26,18 @@ function App() {
   const fetched = useFetchedGames();
   const auth = useAuth();
 
+  // The onboarding screen (sign in, or continue as guest) shows until it's
+  // explicitly dismissed by completing one of those two paths — a signed-in
+  // user who already has a saved username skips it automatically (handled
+  // below), so this only stays relevant for first-time visitors.
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
+  const showOnboarding = auth.checkedSession && !onboardingDismissed && !auth.user?.chessComUsername;
+
   // Runs once, right after we learn whether someone's already signed in
   // (from a previous visit's cookie). If they are, and they have a saved
   // Chess.com username, fill it in and fetch automatically — this is the
   // whole point of Phase 3: come back tomorrow and your games are just
-  // there, no retyping.
+  // there, no retyping, no onboarding screen either.
   const hasAutoFetched = useRef(false);
   useEffect(() => {
     if (!auth.checkedSession || hasAutoFetched.current) return;
@@ -41,13 +49,46 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth.checkedSession]);
 
-  async function handleGoogleCredential(credential) {
+  function startUsingApp(username) {
+    fetched.setUsername(username);
+    fetched.fetchGames(undefined, username);
+    setOnboardingDismissed(true);
+  }
+
+  // From the onboarding screen's Google button. Carries along whatever
+  // username was already typed in that screen's guest field, in case
+  // someone types it and THEN decides to sign in rather than go guest.
+  async function handleOnboardingSignIn(credential, typedUsername) {
     const signedInUser = await auth.signIn(credential);
-    // Guest-to-account migration: if they'd already typed a username before
-    // signing in, save it to their new account instead of losing it.
+    const trimmed = typedUsername.trim();
+
+    if (signedInUser.chessComUsername) {
+      startUsingApp(signedInUser.chessComUsername);
+    } else if (trimmed) {
+      await saveChessComUsername(trimmed);
+      auth.updateChessComUsername(trimmed);
+      startUsingApp(trimmed);
+    }
+    // else: no saved username and nothing typed yet — falls through to the
+    // "needs username only" step, since auth.user is now set.
+  }
+
+  async function handleOnboardingUsernameSubmit(username) {
+    const trimmed = username.trim();
+    await saveChessComUsername(trimmed);
+    auth.updateChessComUsername(trimmed);
+    startUsingApp(trimmed);
+  }
+
+  // The header's own sign-in button (for a guest who's past onboarding and
+  // decides to sign in later) — separate from the onboarding one above
+  // because there's no "typed username" field sitting next to this button.
+  async function handleHeaderGoogleCredential(credential) {
+    const signedInUser = await auth.signIn(credential);
     const typedUsername = fetched.username.trim();
     if (typedUsername && !signedInUser.chessComUsername) {
       await saveChessComUsername(typedUsername);
+      auth.updateChessComUsername(typedUsername);
     }
   }
 
@@ -59,12 +100,29 @@ function App() {
       const trimmed = fetched.username.trim();
       if (trimmed && trimmed !== auth.user.chessComUsername) {
         await saveChessComUsername(trimmed);
+        auth.updateChessComUsername(trimmed);
       }
     }
   }
 
   function openGame(game, moveIndex = -1) {
     setOpenedGame({ game, moveIndex });
+  }
+
+  if (!auth.checkedSession) {
+    return null; // avoids flashing onboarding then immediately replacing it for returning users
+  }
+
+  if (showOnboarding) {
+    return (
+      <OnboardingPage
+        needsUsernameOnly={Boolean(auth.user)}
+        userName={auth.user?.name}
+        onSignInCredential={handleOnboardingSignIn}
+        onGuestContinue={startUsingApp}
+        onUsernameSubmit={handleOnboardingUsernameSubmit}
+      />
+    );
   }
 
   function renderMain() {
@@ -114,14 +172,13 @@ function App() {
             </nav>
           )}
           <div className="auth-slot">
-            {auth.checkedSession &&
-              (auth.user ? (
-                <span className="signed-in-as">
-                  {auth.user.name} <button onClick={auth.signOut}>Sign out</button>
-                </span>
-              ) : (
-                <GoogleSignInButton onCredential={handleGoogleCredential} />
-              ))}
+            {auth.user ? (
+              <span className="signed-in-as">
+                {auth.user.name} <button onClick={auth.signOut}>Sign out</button>
+              </span>
+            ) : (
+              <GoogleSignInButton onCredential={handleHeaderGoogleCredential} />
+            )}
           </div>
         </div>
       </header>

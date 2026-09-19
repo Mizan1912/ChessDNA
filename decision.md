@@ -6,6 +6,34 @@ here.
 
 ---
 
+## D-029 — Dedicated onboarding screen, guest mode kept as an explicit choice
+Date: 2026-09-20
+Phase: 3
+Decided by: user
+
+What: A new first-screen (`OnboardingPage.jsx`) now gates the app before either a sign-in or a
+guest username exists. Three shapes, all driven by one `showOnboarding` check in `App.jsx`
+(`checkedSession && !onboardingDismissed && !user?.chessComUsername`):
+1. Not signed in at all → "Sign in with Google" or type a username and "Continue as guest."
+2. Signed in but no saved username yet (fresh account, or a new device) → just asks for the
+   username, personalized with their name — Google already told us who they are.
+3. Signed in with a saved username → onboarding never shows; skips straight to the existing
+   auto-fetch behaviour from D-028's session-restore work.
+The header's own "Sign in with Google" button still exists separately, for a guest who's past
+onboarding and decides to sign in later — that upgrade path (and its guest-to-account username
+migration) is unchanged from Phase 3's first pass.
+Why: user wanted a proper first-time screen instead of a small header button, while explicitly
+keeping guest mode available (confirmed directly rather than assumed) rather than requiring
+sign-in.
+Alternatives considered: requiring sign-in with no guest mode — user explicitly chose to keep guest
+mode.
+Affects: new `pages/OnboardingPage.jsx`/`.css`, `App.jsx` (onboarding-gating logic, split the
+Google-credential handler into an onboarding version that also carries along a typed username, and
+a header version), `hooks/useAuth.js` (added `updateChessComUsername` for local state sync after
+saving).
+
+---
+
 ## D-028 — Session design: httpOnly JWT cookie, 30 days, SameSite=Lax
 Date: 2026-09-20
 Phase: 3

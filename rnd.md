@@ -17,19 +17,22 @@ Phase: 3
 Raised: 2026-09-20
 
 What's blocking: I built and verified the sign-in flow's plumbing (backend rejects bad credentials
-correctly, session cookie round-trips correctly, username auto-restore and auto-fetch fire
-correctly on a return visit — all confirmed via automated tests using a manually-inserted test user
-and a hand-signed session token) but I cannot complete an actual Google OAuth login myself — that
-needs a real Google account clicking through Google's real consent screen, which no automated tool
-should do.
+correctly, session cookie round-trips correctly, and — via a manually-inserted test user plus a
+hand-signed session token, not a real login — confirmed: username auto-restore + auto-fetch on a
+return visit, the onboarding screen showing for a fresh visitor, "continue as guest" working, and
+the signed-in-but-no-username step saving correctly to Mongo) but I cannot complete an actual Google
+OAuth login myself — that needs a real Google account clicking through Google's real consent
+screen, which no automated tool should do.
 
 Why I can't decide it: it needs your Google account and a real click-through.
 
-What to check: open http://localhost:5173 (with both `npm run dev` in `/frontend` and `npm run dev`
-in `/server` running), click the "Sign in with Google" button in the header, and confirm: (1) it
-completes without an error, (2) your name appears in the header afterward, (3) if you type a
-Chess.com username as a guest first and *then* sign in, that username is still there (not lost) —
-that's the guest-to-account migration path specifically.
+What to check: open http://localhost:5173 in a fresh/incognito window (with both `npm run dev` in
+`/frontend` and `npm run dev` in `/server` running) so you see the real onboarding screen, and
+confirm: (1) "Sign in with Google" completes without an error and your name appears afterward, (2)
+"Continue as guest" with a typed username works and the header still offers to sign in afterward,
+(3) the specific untested case — on the onboarding screen, type a Chess.com username in the guest
+field, then click "Sign in with Google" *instead of* "Continue as guest" — confirm that typed
+username is still saved to your new account rather than lost.
 
 Resolved: _pending your test_
 
