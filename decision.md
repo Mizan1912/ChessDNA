@@ -6,6 +6,27 @@ here.
 
 ---
 
+## D-018 — Games list: time-class tabs, and a contained scrolling table
+Date: 2026-09-19
+Phase: 1 (games list, retroactive addition)
+Decided by: user
+
+What: Two changes to `GamesListPage`, neither in the original build doc:
+1. Tabs above the table split games by time class (Bullet/Blitz/Rapid/Daily, plus "All"), each
+   showing a count, computed from whatever time classes are actually present in the fetched games.
+2. The table itself is now a fixed-height (480px) scrolling box with a sticky header, instead of an
+   unbounded list that stretched the whole page taller the more games were fetched.
+Why: user found the long unbounded table made the whole page scroll awkwardly, and wanted games
+split by format since a player's tilt/blunder patterns can differ a lot between bullet and rapid.
+This isn't in the build doc's Feature list — user explicitly said to build it anyway.
+Alternatives considered: none discussed — straightforward UX fix plus an explicitly requested
+feature.
+Affects: `frontend/src/pages/GamesListPage.jsx`, `GamesListPage.css`. Doesn't affect Tilt/analysis
+logic — time-class filtering is display-only for now; `lib/tilt.js` still analyses all fetched
+games together regardless of the active tab.
+
+---
+
 ## D-017 — Responsive breakpoint at 720px added to every two-column layout
 Date: 2026-09-19
 Phase: 2

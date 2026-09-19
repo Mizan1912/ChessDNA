@@ -7,11 +7,13 @@ researched.
 ## 1. User journey
 
 1. **Games list (`/`)** — a sticky header ("Chess DNA"), a slim toolbar with a Chess.com username
-   field, a slider (10-100, step 10) for how many recent games to fetch, and a "Fetch games" button.
+   field, a slider (3-100, step 10) for how many recent games to fetch, and a "Fetch games" button.
    Beside the toolbar and table sits a chess board: the starting position when idle, and the
    hovered game's final position when hovering a row (a quick visual read of how that game ended).
-   On submit, a dense table appears: date, opponent, result, time control. An unknown username or a
-   network problem shows an inline error instead of the table.
+   On submit, tabs appear above the table splitting games by time class (All / Bullet / Blitz /
+   Rapid / Daily, each with a count) — only tabs for classes actually present show up. The table
+   itself is a fixed-height scrolling box (not the whole page growing taller): date, opponent,
+   result, time control. An unknown username or a network problem shows an inline error instead.
 2. **Game viewer** — clicking any row in the table switches to a board (starting position by
    default, oriented to the user's own colour) beside a move list. Prev/next/start/end buttons and
    a flip-board button step through the game; clicking any move in the list jumps straight to it. A

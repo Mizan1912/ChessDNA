@@ -66,6 +66,16 @@ instead of a technical one.
 
 ---
 
+## 2b. Time-class tabs on the games list
+
+**Files involved:** `pages/GamesListPage.jsx`
+
+This is display-only filtering, nothing fancy: `timeClassTabs()` counts how many fetched games fall
+into each time class (bullet/blitz/rapid/daily), and only shows a tab for a class if at least one
+game has it. Clicking a tab just filters which rows the table shows — it doesn't re-fetch anything,
+and it doesn't affect what the Tilt page analyses (that still uses every fetched game, regardless of
+which tab is active here).
+
 ## 3. The board preview on the games list (hover to see how a game ended)
 
 **Files involved:** `pages/GamesListPage.jsx` → `lib/pgnToMoves.js`
