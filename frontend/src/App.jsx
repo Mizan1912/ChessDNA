@@ -2,6 +2,7 @@ import { useState } from "react";
 import GamesListPage from "./pages/GamesListPage";
 import GameViewerPage from "./pages/GameViewerPage";
 import TiltPage from "./pages/TiltPage";
+import TimeClassTabs from "./components/TimeClassTabs";
 import { useFetchedGames } from "./hooks/useFetchedGames";
 import "./App.css";
 
@@ -15,7 +16,9 @@ function App() {
       return <GameViewerPage game={selectedGame} onBack={() => setSelectedGame(null)} />;
     }
     if (showTilt) {
-      return <TiltPage games={fetched.games} onBack={() => setShowTilt(false)} onOpenGame={setSelectedGame} />;
+      return (
+        <TiltPage games={fetched.filteredGames} onBack={() => setShowTilt(false)} onOpenGame={setSelectedGame} />
+      );
     }
     return (
       <GamesListPage
@@ -24,7 +27,7 @@ function App() {
         setUsername={fetched.setUsername}
         gamesToFetch={fetched.gamesToFetch}
         setGamesToFetch={fetched.setGamesToFetch}
-        games={fetched.games}
+        games={fetched.filteredGames}
         status={fetched.status}
         errorMessage={fetched.errorMessage}
         fetchGames={fetched.fetchGames}
@@ -44,7 +47,17 @@ function App() {
         )}
       </header>
 
-      <main className="app-main">{renderMain()}</main>
+      <main className="app-main">
+        {!selectedGame && (
+          <TimeClassTabs
+            totalCount={fetched.games.length}
+            tabs={fetched.timeClassTabs}
+            active={fetched.timeClassFilter}
+            onChange={fetched.setTimeClassFilter}
+          />
+        )}
+        {renderMain()}
+      </main>
     </>
   );
 }

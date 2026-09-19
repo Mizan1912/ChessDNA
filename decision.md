@@ -6,7 +6,32 @@ here.
 
 ---
 
-## D-018 — Games list: time-class tabs, and a contained scrolling table
+## D-019 — Time-class filter moved from the list page to the shared hook (applies everywhere)
+Date: 2026-09-19
+Phase: 2
+Decided by: user
+
+What: Superseding D-018's "display-only" note. `timeClassFilter` now lives in `useFetchedGames.js`,
+not in `GamesListPage`. The hook exposes `filteredGames` (already narrowed to the active tab) and
+`timeClassTabs`; every page that consumes the hook — the games list, the Tilt page, and any future
+feature page — receives `filteredGames`, not the raw list. The tab UI itself was extracted to a
+shared `components/TimeClassTabs.jsx`, rendered once in `App.jsx` above whichever page is active
+(hidden while viewing a single game, since one game only has one time class).
+Why: user pointed out that many players perform very differently by format (strong at rapid, weak
+at bullet, etc.), so blending all formats into one tilt/blunder/clock analysis would wash out real
+patterns. The split needs to apply to every feature going forward, not just be a table-display
+convenience.
+Alternatives considered: keep the filter local to each page and pass it explicitly between them —
+rejected, that would mean re-deriving or duplicating the same filter state per page as more features
+get added; a single shared source is simpler and guarantees every page stays in sync.
+Affects: `hooks/useFetchedGames.js`, new `lib/timeClass.js`, new `components/TimeClassTabs.jsx/.css`,
+`App.jsx`, `GamesListPage.jsx` (now just renders whatever `games` it's given), `TiltPage.jsx`
+(analyses `filteredGames` instead of all games). Every later feature (clock, blind spots, opening
+fit) should read `filteredGames` from the same hook rather than inventing its own filtering.
+
+---
+
+## D-018 — Games list: time-class tabs, and a contained scrolling table (superseded by D-019)
 Date: 2026-09-19
 Phase: 1 (games list, retroactive addition)
 Decided by: user
@@ -21,9 +46,8 @@ split by format since a player's tilt/blunder patterns can differ a lot between 
 This isn't in the build doc's Feature list — user explicitly said to build it anyway.
 Alternatives considered: none discussed — straightforward UX fix plus an explicitly requested
 feature.
-Affects: `frontend/src/pages/GamesListPage.jsx`, `GamesListPage.css`. Doesn't affect Tilt/analysis
-logic — time-class filtering is display-only for now; `lib/tilt.js` still analyses all fetched
-games together regardless of the active tab.
+Affects: the tab-filtering part of this entry is superseded by D-019 (moved from page-local to
+shared); the contained-scrolling-table part still stands as-is.
 
 ---
 

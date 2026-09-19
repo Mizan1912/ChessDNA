@@ -66,15 +66,26 @@ instead of a technical one.
 
 ---
 
-## 2b. Time-class tabs on the games list
+## 2b. Time-class tabs — shared across the whole app
 
-**Files involved:** `pages/GamesListPage.jsx`
+**Files involved:** `lib/timeClass.js` → `hooks/useFetchedGames.js` → `components/TimeClassTabs.jsx`
 
-This is display-only filtering, nothing fancy: `timeClassTabs()` counts how many fetched games fall
-into each time class (bullet/blitz/rapid/daily), and only shows a tab for a class if at least one
-game has it. Clicking a tab just filters which rows the table shows — it doesn't re-fetch anything,
-and it doesn't affect what the Tilt page analyses (that still uses every fetched game, regardless of
-which tab is active here).
+This filter lives one level above any single page, because it needs to affect all of them:
+
+1. `timeClass.js` has two plain functions: `timeClassTabs(games)` counts how many games fall into
+   each time class (bullet/blitz/rapid/daily), and `filterByTimeClass(games, activeClass)` returns
+   only the games matching the active tab (or everything, if "all" is selected).
+2. `useFetchedGames.js` (the hook from section 1) holds `timeClassFilter` as a piece of state, and
+   computes `filteredGames` from it on every render. This is the value every page actually reads —
+   nobody reads the raw `games` list except to build the tab counts.
+3. `components/TimeClassTabs.jsx` is just buttons — it doesn't know anything about games or tilt, it
+   just calls `onChange(theClassYouClicked)`, which `App.jsx` wires straight to the hook's setter.
+4. `App.jsx` renders `TimeClassTabs` once, above whichever page is currently showing. So clicking
+   "Bullet" while looking at the games list, then switching to the Tilt page, keeps "Bullet"
+   selected — because both pages are reading from the same hook, not two separate filters.
+
+The rule going forward: any new feature page should take its games from `filteredGames`, not
+`games`, so it automatically respects whatever time class the user has selected.
 
 ## 3. The board preview on the games list (hover to see how a game ended)
 

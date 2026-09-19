@@ -31,26 +31,6 @@
   }
 }
 
-.time-class-tabs {
-  display: flex;
-  gap: 0.4rem;
-  margin-top: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.time-class-tabs button {
-  background: none;
-  border: 1px solid var(--color-border);
-  text-transform: capitalize;
-  font-size: 0.85rem;
-  padding: 0.3rem 0.7rem;
-}
-
-.time-class-tabs button.active {
-  border-color: var(--color-accent);
-  color: var(--color-accent);
-}
-
 /* A contained, scrolling table instead of one that stretches the whole page
    however many games got fetched. */
 .games-table-wrapper {
@@ -110,10 +90,6 @@
 .error-message {
   color: var(--color-danger);
   margin-top: 0.75rem;
-}
-
-.games-table {
-  margin-top: 0.5rem;
 }
 
 .games-table tbody tr {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { pgnToMoves, STARTING_FEN } from "../lib/pgnToMoves";
 import "./GamesListPage.css";
@@ -6,10 +6,6 @@ import "./GamesListPage.css";
 const MIN_GAMES = 3;
 const MAX_GAMES = 100;
 const GAMES_STEP = 10;
-
-// Chess.com's known time classes, in the order we want the tabs to appear.
-// Anything outside this list (rare) still gets a tab, just tacked on at the end.
-const KNOWN_TIME_CLASS_ORDER = ["bullet", "blitz", "rapid", "daily"];
 
 function formatDate(timestampMs) {
   return new Date(timestampMs).toLocaleDateString();
@@ -23,18 +19,9 @@ function finalPositionFen(pgn) {
   return moves.length > 0 ? moves[moves.length - 1].fenAfter : STARTING_FEN;
 }
 
-function timeClassTabs(games) {
-  const counts = new Map();
-  for (const game of games) {
-    counts.set(game.timeClass, (counts.get(game.timeClass) || 0) + 1);
-  }
-
-  const known = KNOWN_TIME_CLASS_ORDER.filter((tc) => counts.has(tc));
-  const unknown = [...counts.keys()].filter((tc) => !KNOWN_TIME_CLASS_ORDER.includes(tc));
-
-  return [...known, ...unknown].map((timeClass) => ({ timeClass, count: counts.get(timeClass) }));
-}
-
+// `games` here is already filtered to the active time class — see
+// App.jsx / useFetchedGames.js. This page doesn't know or care about that
+// filter, it just renders whatever list it's given.
 export default function GamesListPage({
   onOpenGame,
   username,
@@ -47,17 +34,6 @@ export default function GamesListPage({
   fetchGames,
 }) {
   const [previewFen, setPreviewFen] = useState(STARTING_FEN);
-  const [activeTimeClass, setActiveTimeClass] = useState("all");
-
-  const tabs = useMemo(() => timeClassTabs(games), [games]);
-  const visibleGames = activeTimeClass === "all" ? games : games.filter((g) => g.timeClass === activeTimeClass);
-
-  // A new fetch can land on a time class that no longer has any games in it
-  // (e.g. switching from a bullet-heavy account to a daily-only one) — fall
-  // back to "all" rather than silently showing an empty table.
-  const hasActiveTab = activeTimeClass === "all" || tabs.some((tab) => tab.timeClass === activeTimeClass);
-  const effectiveTimeClass = hasActiveTab ? activeTimeClass : "all";
-  const effectiveVisibleGames = hasActiveTab ? visibleGames : games;
 
   return (
     <div className="list-layout">
@@ -98,56 +74,36 @@ export default function GamesListPage({
           </p>
         )}
 
-        {status === "done" && games.length === 0 && <p>No games found for this player.</p>}
+        {status === "done" && games.length === 0 && <p>No games found for this selection.</p>}
 
         {games.length > 0 && (
-          <>
-            <div className="time-class-tabs">
-              <button
-                className={effectiveTimeClass === "all" ? "active" : ""}
-                onClick={() => setActiveTimeClass("all")}
-              >
-                All ({games.length})
-              </button>
-              {tabs.map((tab) => (
-                <button
-                  key={tab.timeClass}
-                  className={effectiveTimeClass === tab.timeClass ? "active" : ""}
-                  onClick={() => setActiveTimeClass(tab.timeClass)}
-                >
-                  {tab.timeClass} ({tab.count})
-                </button>
-              ))}
-            </div>
-
-            <div className="games-table-wrapper">
-              <table className="games-table">
-                <thead>
-                  <tr>
-                    <th>Date</th>
-                    <th>Opponent</th>
-                    <th>Result</th>
-                    <th>Time control</th>
+          <div className="games-table-wrapper">
+            <table className="games-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Opponent</th>
+                  <th>Result</th>
+                  <th>Time control</th>
+                </tr>
+              </thead>
+              <tbody>
+                {games.map((game) => (
+                  <tr
+                    key={game.id}
+                    onClick={() => onOpenGame(game)}
+                    onMouseEnter={() => setPreviewFen(finalPositionFen(game.pgn))}
+                    onMouseLeave={() => setPreviewFen(STARTING_FEN)}
+                  >
+                    <td>{formatDate(game.playedAt)}</td>
+                    <td>{game.opponentName}</td>
+                    <td>{game.result}</td>
+                    <td>{game.timeClass}</td>
                   </tr>
-                </thead>
-                <tbody>
-                  {effectiveVisibleGames.map((game) => (
-                    <tr
-                      key={game.id}
-                      onClick={() => onOpenGame(game)}
-                      onMouseEnter={() => setPreviewFen(finalPositionFen(game.pgn))}
-                      onMouseLeave={() => setPreviewFen(STARTING_FEN)}
-                    >
-                      <td>{formatDate(game.playedAt)}</td>
-                      <td>{game.opponentName}</td>
-                      <td>{game.result}</td>
-                      <td>{game.timeClass}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

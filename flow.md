@@ -6,20 +6,23 @@ researched.
 
 ## 1. User journey
 
-1. **Games list (`/`)** — a sticky header ("Chess DNA"), a slim toolbar with a Chess.com username
-   field, a slider (3-100, step 10) for how many recent games to fetch, and a "Fetch games" button.
-   Beside the toolbar and table sits a chess board: the starting position when idle, and the
-   hovered game's final position when hovering a row (a quick visual read of how that game ended).
-   On submit, tabs appear above the table splitting games by time class (All / Bullet / Blitz /
-   Rapid / Daily, each with a count) — only tabs for classes actually present show up. The table
-   itself is a fixed-height scrolling box (not the whole page growing taller): date, opponent,
-   result, time control. An unknown username or a network problem shows an inline error instead.
+1. **Games list (`/`)** — a sticky header ("Chess DNA"). Once games are fetched, time-class tabs
+   (All / Bullet / Blitz / Rapid / Daily, each with a count) appear right below the header — this
+   selection is shared app-wide, not just a table filter (see point 3). Below that, a slim toolbar
+   with a Chess.com username field, a slider (3-100, step 10) for how many recent games to fetch,
+   and a "Fetch games" button. Beside the toolbar and table sits a chess board: the starting
+   position when idle, and the hovered game's final position when hovering a row. The table itself
+   is a fixed-height scrolling box (not the whole page growing taller): date, opponent, result,
+   time control — showing only games matching the active time-class tab. An unknown username or a
+   network problem shows an inline error instead.
 2. **Game viewer** — clicking any row in the table switches to a board (starting position by
    default, oriented to the user's own colour) beside a move list. Prev/next/start/end buttons and
    a flip-board button step through the game; clicking any move in the list jumps straight to it. A
    link at the top goes back to the real game on Chess.com. "Back to list" returns to whichever
    screen opened the viewer (the games list or the Tilt page).
-3. **Tilt findings** — a "Tilt findings" link appears in the header once games are fetched. Shows:
+3. **Tilt findings** — a "Tilt findings" link appears in the header once games are fetched. The same
+   time-class tabs from point 1 stay visible and apply here too — switching to "Bullet" re-runs the
+   whole analysis on just your bullet games. Shows:
    a one-line "stop after N games" instruction (or "no clear break point yet"), a table of score by
    position-in-session with the break point highlighted, an "after a loss" comparison (overall vs.
    right after any loss vs. right after a loss on time specifically), and a worst-hour-of-day
