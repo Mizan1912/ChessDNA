@@ -134,6 +134,35 @@ This is the most "logic-heavy" feature so far. Here's the chain:
 
 ---
 
+## 4b. The clock fingerprint
+
+**Files involved:** `lib/clockData.js` → `lib/clockFingerprint.js` → `pages/ClockPage.jsx`
+
+1. **Reading the clock from a PGN** (`clockData.js`): Chess.com/Lichess PGNs put a comment like
+   `{[%clk 0:02:31.4]}` after every move — chess.js's `getComments()` returns these keyed by the FEN
+   right after that move, which lines up exactly with the `after` FEN from `history({verbose:true})`
+   (the same trick section 2 uses). Time spent on a move is just "previous reading for that same
+   color minus this reading," plus the increment (parsed from the PGN's `TimeControl` header, e.g.
+   `"180+2"` means 2 seconds added per move). For each color's very first move, there's no earlier
+   reading to subtract from, so the time control's starting seconds are used instead.
+2. **Opening time share** (`clockFingerprint.js`): every move is tagged `isOpening` if it's move 12
+   or earlier (matches the spec's own cutoff). Sum the time spent on opening moves, divide by time
+   spent on all moves, across every fetched game at once.
+3. **Longest think**: just a max — whichever single move, across every game, has the largest
+   time-spent value. It keeps a reference to which game it came from.
+4. **Games lost on time**: filters the game list for `result === "loss"` AND `resultReason ===
+   "timeout"` (the exact reason string Chess.com gives us, preserved since `normalizeGame.js` added
+   it in Phase 2 — see section on the tilt chain, which needed the same field).
+5. **Known position, wasted time**: every opening-move position gets grouped by a simplified version
+   of its FEN (piece placement, whose turn, castling rights, en passant — but NOT the move-count
+   numbers at the end of a FEN, since those always differ). Any group reached 20 or more times counts
+   as "a position you know." Among only those groups, find the single slowest think — that's the
+   finding. If nothing has been repeated 20+ times yet, this finding just doesn't show.
+
+**What's deliberately not built yet:** whether a long think's move was actually good, what share of
+blunders happen under 60 seconds, and whether a time-loss happened from a winning position — all
+three need an engine evaluation, which doesn't exist until Phase 4 (see decision.md D-020).
+
 ## 5. Showing evidence for a finding
 
 **Files involved:** `components/GameEvidenceList.jsx`
@@ -154,3 +183,5 @@ Pick the feature, then read the files in this order — each one calls into the 
 - **Fetching/viewing games:** `useFetchedGames.js` → `chessComApi.js` → `normalizeGame.js` →
   `GamesListPage.jsx` → `pgnToMoves.js` → `GameViewerPage.jsx`
 - **Tilt:** `sessions.js` → `tilt.js` → `TiltPage.jsx` → `GameEvidenceList.jsx`
+- **Clock:** `clockData.js` → `clockFingerprint.js` → `ClockPage.jsx`
+- **Time-class filter:** `timeClass.js` → `useFetchedGames.js` → `TimeClassTabs.jsx` (rendered by `App.jsx`)

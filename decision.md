@@ -6,6 +6,28 @@ here.
 
 ---
 
+## D-020 — Clock fingerprint scoped down; engine-dependent parts deferred to Phase 4
+Date: 2026-09-19
+Phase: 2
+Decided by: user
+
+What: Feature 3 ships now with: opening time share (% of total time in moves 1-12), the single
+longest think found (with its game/move), a count of games lost on time, and a "repeated position,
+wasted time" finding (a position reached 20+ times where an unusually long think still happened —
+the worst such example, not a fixed threshold). Deferred to Phase 4: whether a long think's move was
+actually good, the share of blunders happening under 60 seconds, and whether a time-loss happened
+from a winning/equal position — all three need an engine eval that doesn't exist yet. The spec's
+material-based middlegame/endgame zone split is also skipped for now — nothing buildable today
+consumes it (only the deferred blunder/scramble-zone metric does); it'll be added once something
+actually needs it, per the "no fake work" rule against building unused plumbing ahead of time.
+Why: same reasoning as D-013 — ship the real, verifiable numbers now rather than a placeholder for
+the eval-dependent ones.
+Alternatives considered: wait until Phase 4 to build any of Feature 3 — user preferred shipping the
+buildable half now.
+Affects: new `lib/clockData.js`, new `lib/clockFingerprint.js`, new `pages/ClockPage.jsx`.
+
+---
+
 ## D-019 — Time-class filter moved from the list page to the shared hook (applies everywhere)
 Date: 2026-09-19
 Phase: 2
