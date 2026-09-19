@@ -12,6 +12,9 @@
 //   userColor: "white" | "black"
 //   opponentName: string
 //   result: "win" | "loss" | "draw"
+//   resultReason: string   - the site's specific reason, e.g. "timeout", "resigned",
+//                            "checkmated", "agreed" — used by the tilt detector to
+//                            tell "lost on time" apart from other losses
 //   pgn: string
 // }
 
@@ -48,6 +51,7 @@ export function normalizeChessComGame(rawGame, username) {
     userColor: userIsWhite ? "white" : "black",
     opponentName: opponentSide.username,
     result: toWinLossDraw(userSide.result),
+    resultReason: userSide.result,
     pgn: rawGame.pgn,
   };
 }

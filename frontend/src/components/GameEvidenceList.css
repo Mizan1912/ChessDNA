@@ -1,0 +1,32 @@
+.evidence-list {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+}
+
+.evidence-row {
+  display: flex;
+  gap: 1rem;
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  background: none;
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid var(--color-border);
+  color: var(--color-text);
+  text-align: left;
+  font-size: 0.85rem;
+}
+
+.evidence-list li:last-child .evidence-row {
+  border-bottom: none;
+}
+
+.evidence-row:hover {
+  color: var(--color-accent);
+  border-color: var(--color-border);
+}

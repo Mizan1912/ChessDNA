@@ -6,6 +6,79 @@ here.
 
 ---
 
+## D-015 — Shared GameEvidenceList component for the evidence rule
+Date: 2026-09-19
+Phase: 2
+Decided by: agent
+
+What: Added `components/GameEvidenceList.jsx` — a plain clickable list (date, opponent, result)
+that opens a game in the real board viewer. `TiltPage` uses it behind "show the N games..." toggles
+on every finding (break-point row, post-loss chain, worst hour).
+Why: the build doc's evidence rule is unconditional — "no finding is ever shown without a way to
+see the games it came from." This is the shared piece every later feature (blind spots, clock,
+opening fit) can reuse instead of each page inventing its own list.
+Alternatives considered: board thumbnails per list row (the doc's ideal for Feature 1's blunder
+list) — deferred here since Feature 2's findings aren't tied to one specific board position the way
+a blunder is; a plain list is honest and sufficient for "this game was part of that group."
+Affects: `frontend/src/components/GameEvidenceList.jsx/.css`, `TiltPage.jsx`.
+
+---
+
+## D-014 — Tilt break-point threshold: 10 percentage points, minimum 20 sessions
+Date: 2026-09-19
+Phase: 2
+Decided by: user
+
+What: The "break point" (the session index where play starts falling apart) is the first index whose
+average score is 10 percentage points or more below the session's game-1 score, and stays at least
+that far below for every later index that has data. Nothing is reported below 20 total sessions —
+shows "not enough games yet" instead, per the spec.
+Why: user picked 10 points as the sensitivity that catches real tilt without flagging normal
+game-to-game variance.
+Alternatives considered: 15 points (stricter, could miss real but smaller effects); tune after
+seeing real data (user preferred deciding upfront).
+Affects: `frontend/src/lib/tilt.js`.
+
+---
+
+## D-013 — "Lost from a winning position" tilt chain deferred to Phase 4
+Date: 2026-09-19
+Phase: 2
+Decided by: user
+
+What: Phase 2's tilt detector computes "score after any loss" and "score after a loss on time"
+(both readable straight from PGN result/termination text), but not "score after a loss from a
+winning position" — that needs an engine eval to know the game was winning before it flipped, and
+there's no Stockfish yet.
+Why: user chose accuracy over a placeholder number. A heuristic (move count, end material) could
+mislead exactly the kind of person this app is trying to tell the truth to.
+Alternatives considered: cheap heuristic (material/move-count based guess) — rejected as unreliable.
+Affects: `lib/tilt.js` (to be built); revisit once Phase 4 adds Stockfish evals.
+
+---
+
+## D-012 — Archive-walking inefficiency deferred to Phase 3, not fixed now
+Date: 2026-09-19
+Phase: 1
+Decided by: agent
+Needs review: yes
+
+What: `getRecentGames` pulls a whole month's archive JSON from Chess.com even when only a handful
+of games are needed, because Chess.com's archive endpoint has no "give me the last N games" option.
+No change is being made to work around this now.
+Why: the build doc's own "Sync strategy" section already plans the real fix — track
+`lastAnalysedGameId` per user and fetch only games newer than it on repeat visits, so only the
+*first* sync ever pulls a full month. That tracking needs somewhere to persist the id, which is
+what Phase 3 (Mongo) adds. Building a workaround now would duplicate work Phase 3 already does
+properly.
+Alternatives considered: caching archives in IndexedDB in the meantime — rejected as unnecessary
+complexity for a problem that only shows up for very high-volume accounts, and that Phase 3 removes
+anyway.
+Affects: `frontend/src/lib/chessComApi.js` (unchanged for now); revisit when Phase 3 adds
+`lastAnalysedGameId`.
+
+---
+
 ## D-011 — Phase 1 closes with Chess.com only; Lichess parked
 Date: 2026-09-19
 Phase: 1
@@ -196,6 +269,8 @@ Affects: nothing pushes anywhere until the user explicitly asks.
 
 - **Vercel deployment** (belongs to: whenever the user is ready) — scaffold and `npm run build`
   confirmed working locally; deployment itself paused per D-005.
+- **"Lost from a winning position" tilt chain** (belongs to: Phase 4, once Stockfish evals exist) —
+  parked per D-013.
 - **Lichess support** (belongs to: whenever it's picked back up, likely before Phase 3 so saved DNA
   covers both platforms) — parked per D-011. `lib/chessComApi.js` and `normalizeGame.js` were
   written with the platform split in mind (see D-007), so adding `lib/lichessApi.js` +

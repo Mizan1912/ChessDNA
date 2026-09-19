@@ -1,16 +1,10 @@
 import { useState } from "react";
 import { Chessboard } from "react-chessboard";
-import { getRecentGames, UsernameNotFoundError } from "../lib/chessComApi";
-import { normalizeChessComGame } from "../lib/normalizeGame";
 import { pgnToMoves, STARTING_FEN } from "../lib/pgnToMoves";
 import "./GamesListPage.css";
 
-// Slider bounds for how many games to pull. 50 matches the "first run analyses
-// 50 games" plan from the build doc, kept here only as the slider's starting
-// value — the user can move it, so it's not a fixed limit anywhere else.
-const MIN_GAMES = 10;
+const MIN_GAMES = 3;
 const MAX_GAMES = 100;
-const DEFAULT_GAMES = 50;
 const GAMES_STEP = 10;
 
 function formatDate(timestampMs) {
@@ -25,42 +19,23 @@ function finalPositionFen(pgn) {
   return moves.length > 0 ? moves[moves.length - 1].fenAfter : STARTING_FEN;
 }
 
-export default function GamesListPage({ onOpenGame }) {
-  const [username, setUsername] = useState("");
-  const [gamesToFetch, setGamesToFetch] = useState(DEFAULT_GAMES);
-  const [games, setGames] = useState([]);
-  const [status, setStatus] = useState("idle"); // idle | loading | error | done
-  const [errorMessage, setErrorMessage] = useState("");
+export default function GamesListPage({
+  onOpenGame,
+  username,
+  setUsername,
+  gamesToFetch,
+  setGamesToFetch,
+  games,
+  status,
+  errorMessage,
+  fetchGames,
+}) {
   const [previewFen, setPreviewFen] = useState(STARTING_FEN);
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    const trimmedUsername = username.trim();
-    if (!trimmedUsername) return;
-
-    setStatus("loading");
-    setErrorMessage("");
-
-    try {
-      const rawGames = await getRecentGames(trimmedUsername, gamesToFetch);
-      const normalized = rawGames.map((game) => normalizeChessComGame(game, trimmedUsername));
-      setGames(normalized);
-      setStatus("done");
-    } catch (error) {
-      if (error instanceof UsernameNotFoundError) {
-        setErrorMessage(error.message);
-      } else {
-        setErrorMessage("Something went wrong reaching Chess.com. Try again in a moment.");
-      }
-      setGames([]);
-      setStatus("error");
-    }
-  }
 
   return (
     <div className="list-layout">
       <div className="list-main">
-        <form className="toolbar" onSubmit={handleSubmit}>
+        <form className="toolbar" onSubmit={fetchGames}>
           <div className="field">
             <label htmlFor="username">Chess.com username</label>
             <input
