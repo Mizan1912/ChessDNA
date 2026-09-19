@@ -35,8 +35,11 @@ export default function ClockPage({ games, onBack, onOpenGame }) {
         Your longest think was {formatSeconds(result.longestThink.timeSpentSeconds)}, on move{" "}
         {result.longestThink.moveNumber} ({result.longestThink.san}).
       </p>
-      <button className="link-button" onClick={() => onOpenGame(result.longestThink.game)}>
-        open that game
+      <button
+        className="link-button"
+        onClick={() => onOpenGame(result.longestThink.game, result.longestThink.plyIndex - 1)}
+      >
+        see that position
       </button>
 
       <h3>Lost on time</h3>
@@ -62,9 +65,14 @@ export default function ClockPage({ games, onBack, onOpenGame }) {
           </p>
           <button
             className="link-button"
-            onClick={() => onOpenGame(result.wastefulKnownPosition.worst.game)}
+            onClick={() =>
+              onOpenGame(
+                result.wastefulKnownPosition.worst.game,
+                result.wastefulKnownPosition.worst.plyIndex - 1
+              )
+            }
           >
-            open that game
+            see that position
           </button>
         </>
       )}

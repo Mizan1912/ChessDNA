@@ -30,10 +30,15 @@ export function analyzeClock(games) {
     }
 
     for (const move of clockMoves) {
+      if (move.timeSpentSeconds === null) continue; // no timing data for this move
+
       const entry = { ...move, game };
       allMoves.push(entry);
 
-      if (move.isOpening) {
+      // Ply 0 is the universal starting position — every game shares it
+      // regardless of what the player does, so it's not a meaningful "known
+      // position" and would otherwise dominate this list for trivial reasons.
+      if (move.isOpening && move.plyIndex > 0) {
         const key = positionKey(move.fenBefore);
         if (!positionMap.has(key)) positionMap.set(key, []);
         positionMap.get(key).push(entry);

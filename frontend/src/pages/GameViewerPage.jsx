@@ -1,13 +1,34 @@
 import { useMemo, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { pgnToMoves, STARTING_FEN } from "../lib/pgnToMoves";
+import { pgnToClockMoves } from "../lib/clockData";
 import "./GameViewerPage.css";
 
-export default function GameViewerPage({ game, onBack }) {
+function formatSeconds(seconds) {
+  if (seconds === null) return null;
+  return seconds < 10 ? `${seconds.toFixed(1)}s` : `${Math.round(seconds)}s`;
+}
+
+// `initialMoveIndex` lets a finding elsewhere in the app (the clock page's
+// "longest think" or "known position" findings) open this game already
+// sitting on the exact move being talked about, instead of always dropping
+// the viewer at the start of the game and making the user click forward to
+// find it themselves.
+export default function GameViewerPage({ game, onBack, initialMoveIndex = -1 }) {
   const moves = useMemo(() => pgnToMoves(game.pgn), [game.pgn]);
 
+  // clockData.js always returns one entry per ply, same order as pgnToMoves,
+  // so they can be lined up by array index — see clockData.js's own comment.
+  const clockMoves = useMemo(() => {
+    try {
+      return pgnToClockMoves(game.pgn);
+    } catch {
+      return [];
+    }
+  }, [game.pgn]);
+
   // -1 means "starting position, before move 1"
-  const [moveIndex, setMoveIndex] = useState(-1);
+  const [moveIndex, setMoveIndex] = useState(initialMoveIndex);
   const [boardOrientation, setBoardOrientation] = useState(
     game.userColor === "black" ? "black" : "white"
   );
@@ -64,17 +85,21 @@ export default function GameViewerPage({ game, onBack }) {
           </div>
 
           <ol className="move-list">
-            {moves.map((move, index) => (
-              <li key={index}>
-                <button
-                  className={index === moveIndex ? "active" : ""}
-                  onClick={() => setMoveIndex(index)}
-                >
-                  {move.color === "w" ? `${move.moveNumber}. ` : ""}
-                  {move.san}
-                </button>
-              </li>
-            ))}
+            {moves.map((move, index) => {
+              const timeLabel = formatSeconds(clockMoves[index]?.timeSpentSeconds ?? null);
+              return (
+                <li key={index}>
+                  <button
+                    className={index === moveIndex ? "active" : ""}
+                    onClick={() => setMoveIndex(index)}
+                  >
+                    {move.color === "w" ? `${move.moveNumber}. ` : ""}
+                    {move.san}
+                    {timeLabel && <span className="move-time"> {timeLabel}</span>}
+                  </button>
+                </li>
+              );
+            })}
           </ol>
         </div>
       </div>

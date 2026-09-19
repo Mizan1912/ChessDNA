@@ -3,7 +3,8 @@ import { Chess } from "chess.js";
 // Chess.com/Lichess PGNs put a clock reading after every move, like
 // {[%clk 0:02:31.4]}. This file turns that into "how many seconds did the
 // player spend thinking on each move" — the raw material the clock
-// fingerprint (lib/clockFingerprint.js) is built from.
+// fingerprint (lib/clockFingerprint.js) is built from, and what the game
+// viewer shows next to each move.
 
 const OPENING_MOVE_CUTOFF = 12; // see decision.md D-020 — matches the spec's own "to move 12"
 
@@ -22,9 +23,14 @@ function parseTimeControl(pgn) {
   return { baseSeconds: Number(match[1]), incrementSeconds: match[2] ? Number(match[2]) : 0 };
 }
 
-// Returns one entry per move: { moveNumber, color, san, timeSpentSeconds,
-// fenBefore, isOpening }. Moves with no clock data (older games, or a PGN
-// with clocks stripped) are left out rather than guessed at.
+// Returns exactly one entry per ply — same length and order as
+// pgnToMoves.js's output, so the two can be lined up by array index. When a
+// move's timing can't be worked out (no clock comment, or no earlier reading
+// to compare against), timeSpentSeconds is null rather than the entry being
+// dropped, so callers don't have to guess why the arrays might not match up.
+//
+// plyIndex is the same 0-based position used by pgnToMoves.js's array — use
+// it to jump the board viewer straight to this exact move.
 export function pgnToClockMoves(pgn) {
   const game = new Chess();
   game.loadPgn(pgn);
@@ -36,9 +42,7 @@ export function pgnToClockMoves(pgn) {
   const verboseHistory = game.history({ verbose: true });
   const clockReadings = verboseHistory.map((move) => parseClockSeconds(commentByFen.get(move.after)));
 
-  const result = [];
-  for (let i = 0; i < verboseHistory.length; i++) {
-    const move = verboseHistory[i];
+  return verboseHistory.map((move, i) => {
     const clockNow = clockReadings[i];
     // The previous reading for the SAME color is two plies back (white,
     // black, white, black, ...). For each color's very first move there's no
@@ -46,19 +50,17 @@ export function pgnToClockMoves(pgn) {
     // know it.
     const clockBefore = i >= 2 ? clockReadings[i - 2] : baseSeconds;
 
-    if (clockNow === null || clockBefore === null) continue;
+    const timeSpentSeconds =
+      clockNow === null || clockBefore === null ? null : Math.max(0, clockBefore - clockNow + incrementSeconds);
 
-    const timeSpentSeconds = Math.max(0, clockBefore - clockNow + incrementSeconds);
-
-    result.push({
+    return {
+      plyIndex: i,
       moveNumber: Math.floor(i / 2) + 1,
       color: move.color,
       san: move.san,
       fenBefore: move.before,
       timeSpentSeconds,
       isOpening: Math.floor(i / 2) + 1 <= OPENING_MOVE_CUTOFF,
-    });
-  }
-
-  return result;
+    };
+  });
 }

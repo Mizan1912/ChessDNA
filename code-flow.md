@@ -163,6 +163,28 @@ This is the most "logic-heavy" feature so far. Here's the chain:
 blunders happen under 60 seconds, and whether a time-loss happened from a winning position — all
 three need an engine evaluation, which doesn't exist until Phase 4 (see decision.md D-020).
 
+**Why ply 0 is excluded from "known position":** the position before White's very first move is
+*always* the same standard chess starting position, in every single game, regardless of anything the
+player does. Without excluding it, it would automatically "win" the known-position check every time
+(it's always reached 100% as often as there are games) and make the finding meaningless. See
+decision.md D-021.
+
+## 4c. Jumping straight to a position from a finding
+
+**Files involved:** `App.jsx` → `pages/GameViewerPage.jsx`
+
+`App.jsx` doesn't just remember which game is open — it remembers `{ game, moveIndex }` together.
+Normally `moveIndex` is `-1` (start of the game), but the Clock page's "see that position" buttons
+call `onOpenGame(game, somePlyIndex - 1)` — one ply *before* the move being talked about, since that
+earlier position is what "the known position" actually refers to (the position right before the
+slow think happened, not after). `GameViewerPage` just reads this in as its starting `moveIndex`
+instead of always starting at `-1`.
+
+The move list also shows each move's thinking time now: `GameViewerPage` calls both `pgnToMoves`
+(for the board positions) and `pgnToClockMoves` (for the timing) on the same PGN, and since both
+walk the exact same list of moves in the exact same order, it can just look up `clockMoves[index]`
+for whatever move `moves[index]` is — no separate matching logic needed.
+
 ## 5. Showing evidence for a finding
 
 **Files involved:** `components/GameEvidenceList.jsx`

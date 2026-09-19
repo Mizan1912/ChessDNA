@@ -6,6 +6,32 @@ here.
 
 ---
 
+## D-021 — Evidence links jump to the exact position; move list shows time per move
+Date: 2026-09-20
+Phase: 2
+Decided by: user
+
+What: Two fixes to the clock fingerprint's evidence:
+1. `GameViewerPage` now accepts an `initialMoveIndex` prop. Clicking "see that position" from the
+   Clock page's "longest think" or "known position" findings opens the viewer already sitting on the
+   position right before that move, instead of always starting at move 0 and making the user click
+   forward to find it. `App.jsx` now tracks `{game, moveIndex}` together instead of just `game`.
+2. The move list in `GameViewerPage` now shows each move's thinking time next to it (e.g. "c5
+   9.7s"), using `clockData.js`'s per-ply output lined up by array index with `pgnToMoves.js`'s
+   output.
+Also fixed a real bug this surfaced: the "known position, wasted time" finding was almost always
+just the universal starting position (ply 0), since literally every game shares it regardless of
+what the player does — trivial and uninteresting. `clockData.js` now returns one entry per ply
+always (with `timeSpentSeconds: null` instead of being dropped, so it stays index-aligned with
+`pgnToMoves.js`), and `clockFingerprint.js` excludes ply 0 from the "known position" candidate pool.
+Why: user pointed out that opening a whole game to find one specific position defeats the point of
+the finding, and that seeing time only as a sentence is less useful than seeing it move-by-move.
+Alternatives considered: none — both were straightforward defects once named.
+Affects: `lib/clockData.js`, `lib/clockFingerprint.js`, `GameViewerPage.jsx`/`.css`, `ClockPage.jsx`,
+`App.jsx`.
+
+---
+
 ## D-020 — Clock fingerprint scoped down; engine-dependent parts deferred to Phase 4
 Date: 2026-09-19
 Phase: 2

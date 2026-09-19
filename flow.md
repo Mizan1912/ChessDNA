@@ -15,11 +15,13 @@ researched.
    is a fixed-height scrolling box (not the whole page growing taller): date, opponent, result,
    time control — showing only games matching the active time-class tab. An unknown username or a
    network problem shows an inline error instead.
-2. **Game viewer** — clicking any row in the table switches to a board (starting position by
-   default, oriented to the user's own colour) beside a move list. Prev/next/start/end buttons and
-   a flip-board button step through the game; clicking any move in the list jumps straight to it. A
-   link at the top goes back to the real game on Chess.com. "Back to list" returns to whichever
-   screen opened the viewer (the games list or the Tilt page).
+2. **Game viewer** — clicking any row in the table switches to a board, oriented to the user's own
+   colour, beside a move list where every move shows its thinking time (e.g. "c5 9.7s") when the
+   game has clock data. Opens at the starting position by default — except when opened from a clock
+   finding, which jumps straight to the exact position that finding is about. Prev/next/start/end
+   buttons and a flip-board button step through the game; clicking any move in the list jumps
+   straight to it. A link at the top goes back to the real game on Chess.com. "Back to list" returns
+   to whichever screen opened the viewer.
 3. **Tilt findings** — appears via the header nav once games are fetched. The same time-class tabs
    from point 1 stay visible and apply here too — switching to "Bullet" re-runs the whole analysis
    on just your bullet games. Shows:
@@ -30,10 +32,12 @@ researched.
    Every finding has a "show the N games..." toggle that reveals the real games behind it
    (date/opponent/result), each clickable straight into the board viewer — the evidence rule.
 4. **Clock** — appears via the header nav. Shows: opening time share (% of total thinking time
-   spent in the first 12 moves), the single longest think found (with a link to that game), a count
-   of games lost on time (with an evidence list), and a "known position, wasted time" finding — a
-   position reached 20+ times where a standout slow think still happened (linked to that game). If
-   none of the fetched games have clock data in their PGN, says so plainly instead of showing zeros.
+   spent in the first 12 moves), the single longest think found, a count of games lost on time (with
+   an evidence list), and a "known position, wasted time" finding — a position reached 20+ times
+   (not counting the universal game-start position) where a standout slow think still happened. The
+   longest-think and known-position findings both have a "see that position" link that opens the
+   viewer sitting on that exact position, not just the start of the game. If none of the fetched
+   games have clock data in their PGN, says so plainly instead of showing zeros.
 
 The header nav (Games list / Tilt findings / Clock) shows buttons for whichever views you're *not*
 currently on. No routing library is in use yet — the app is four screens toggled by local state in
