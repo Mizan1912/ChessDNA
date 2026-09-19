@@ -6,6 +6,48 @@ here.
 
 ---
 
+## D-026 — Fix: games list caused horizontal page overflow on mobile
+Date: 2026-09-20
+Phase: 1 (bug found while re-testing after D-025)
+Decided by: agent
+
+What: `.list-main` (the column holding the toolbar and table on the games list page) had no width
+constraint of its own on mobile — in a column-direction flex container, `flex: 1` doesn't stop an
+item from growing to fit wide content, so it grew to match the table's natural width (431px) inside
+a 343px-wide parent, dragging the whole page 74px wider than the viewport. The table's own
+`overflow-x: auto` never engaged because its container was never actually constrained enough to
+overflow against. Added `width: 100%; min-width: 0;` to `.list-main` inside the existing 720px
+breakpoint. Confirmed via a real headless-browser check: `document.documentElement.scrollWidth -
+clientWidth` was 74px before the fix, 0 after.
+Why: this regressed when the "You" column was added (D-022) without re-running the mobile overflow
+check from D-017 — found now while re-verifying the page after the palette change (unrelated to the
+palette itself). `GameViewerPage.css`'s equivalent `.moves-panel` already had this fix from D-017 and
+was unaffected.
+Alternatives considered: none — a straightforward layout defect.
+Affects: `frontend/src/pages/GamesListPage.css`.
+
+---
+
+## D-025 — Warm espresso background palette; Inter for body text
+Date: 2026-09-20
+Phase: 2
+Decided by: user
+
+What: Replaced the neutral blue-black slate background (`#14171b` family) with a warm espresso/wood
+tone (`#1b140f` family) across every surface token, and swapped the body/numbers font from the
+system-ui stack to Inter (loaded free from Google Fonts, same source as the existing Fraunces
+heading font). Fraunces stays for headings — only the body typeface changed.
+Why: user wanted a different background colour and font family. Chose warm over cool because the
+board's own wood-toned squares now read as part of one palette instead of clashing with a
+blue-black background; kept the heading/body split since the doc's "give headings real character,
+keep body plain" rule still holds — only which plain font changed.
+Alternatives considered: cooler dark (navy/charcoal), lighter charcoal grey, single font family for
+everything, different heading font — user picked warm background + Inter body specifically.
+Affects: `frontend/src/index.css` (all colour tokens, `--font-body`), `frontend/index.html` (font
+link), `frontend/src/App.css` (header glass background rgba, kept in sync with the new bg colour).
+
+---
+
 ## D-024 — Deep-link animation refined: animate only the highlighted move itself
 Date: 2026-09-20
 Phase: 2

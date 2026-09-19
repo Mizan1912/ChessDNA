@@ -23,6 +23,15 @@
     flex-direction: column;
   }
 
+  /* In a column flex container, width becomes the cross-axis — "flex: 1"
+     alone doesn't stop this from growing to fit the table's natural (wider)
+     content, which was letting it drag the whole page wider instead of
+     leaving that to the table wrapper's own overflow-x scroll. */
+  .list-main {
+    width: 100%;
+    min-width: 0;
+  }
+
   .list-board-panel {
     width: 100%;
     max-width: 360px;

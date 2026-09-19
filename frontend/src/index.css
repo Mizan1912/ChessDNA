@@ -1,21 +1,23 @@
-/* Design tokens — see decision.md D-009. Palette drawn from the board itself:
-   wood (accent), slate (surfaces), bone (text). One accent colour, used
-   sparingly, per the build doc's design direction. Dark by default, no
+/* Design tokens — see decision.md D-009 and D-025. Palette drawn from the
+   board itself: wood (background + accent), bone (text). One accent colour,
+   used sparingly, per the build doc's design direction. Dark by default, no
    light variant — this is a dense tool for people already used to Lichess,
-   not a marketing site that needs to please every visitor's OS setting. */
+   not a marketing site that needs to please every visitor's OS setting.
+   Background is a warm espresso/wood tone rather than a neutral blue-black
+   slate, per D-025. */
 :root {
-  --color-bg: #14171b;
-  --color-surface: #1b1f24;
-  --color-surface-raised: #22272d;
-  --color-border: #2c3138;
-  --color-text: #e9e6df;
-  --color-text-muted: #8b9198;
+  --color-bg: #1b140f;
+  --color-surface: #241b15;
+  --color-surface-raised: #2e2219;
+  --color-border: #40311f;
+  --color-text: #ede6da;
+  --color-text-muted: #a89984;
   --color-accent: #c99a3c;
   --color-accent-hover: #dcae52;
   --color-danger: #c25450;
 
   --font-heading: "Fraunces", Georgia, serif;
-  --font-body: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Consolas, monospace;
 
   --radius-sm: 3px;
