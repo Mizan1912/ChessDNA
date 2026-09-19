@@ -9,11 +9,11 @@ function formatSeconds(seconds) {
   return seconds < 10 ? `${seconds.toFixed(1)}s` : `${Math.round(seconds)}s`;
 }
 
-// `initialMoveIndex` lets a finding elsewhere in the app (the clock page's
-// "longest think" or "known position" findings) open this game already
-// sitting on the exact move being talked about, instead of always dropping
-// the viewer at the start of the game and making the user click forward to
-// find it themselves.
+// `initialMoveIndex` is the move a finding elsewhere in the app (the clock
+// page's "longest think" or "known position" findings) wants highlighted and
+// animated when this viewer opens — e.g. the slow move itself, not the game
+// as a whole. -1 means "no target, just open at the start" (the normal case,
+// clicking a game from the list).
 export default function GameViewerPage({ game, onBack, initialMoveIndex = -1 }) {
   const moves = useMemo(() => pgnToMoves(game.pgn), [game.pgn]);
 
@@ -27,13 +27,12 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1 }) 
     }
   }, [game.pgn]);
 
-  // -1 means "starting position, before move 1". Always MOUNT at the start,
-  // even when a finding wants to open on a specific move — react-chessboard
-  // only animates a piece sliding when the position CHANGES, not on first
-  // mount, so jumping straight to the target position on mount would just
-  // show it frozen there with no motion. Moving to it a tick after mount
-  // turns that into a real, visible slide.
-  const [moveIndex, setMoveIndex] = useState(-1);
+  // -1 means "starting position, before move 1". When a finding wants a
+  // specific move highlighted, mount one ply BEFORE it (silently — nothing
+  // animates on first mount anyway) and then step forward exactly once, a
+  // tick later. That single step is what actually animates — just that one
+  // move sliding into place, not a jump across everything since move 0.
+  const [moveIndex, setMoveIndex] = useState(Math.max(-1, initialMoveIndex - 1));
   const [boardOrientation, setBoardOrientation] = useState(
     game.userColor === "black" ? "black" : "white"
   );

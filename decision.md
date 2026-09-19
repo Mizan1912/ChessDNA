@@ -6,6 +6,26 @@ here.
 
 ---
 
+## D-024 — Deep-link animation refined: animate only the highlighted move itself
+Date: 2026-09-20
+Phase: 2
+Decided by: user
+
+What: Superseding part of D-023. The first fix animated the whole jump from the start of the game to
+the target position (correct for small jumps, but a confusing multi-piece jump for a target deep
+into the game). User clarified they wanted only the specific highlighted move to animate. Now
+`GameViewerPage` mounts silently one ply *before* the target (no animation needed for "arriving"),
+then steps forward exactly once — always a clean single-move animation (or two pieces for a
+castle/en-passant/promotion), landing with the actual finding's move highlighted as active.
+`ClockPage` now passes the target move's own `plyIndex` (not `plyIndex - 1`) since `GameViewerPage`
+handles stepping back internally. Confirmed via Playwright: exactly one piece animates, and the
+final highlighted move matches the finding.
+Why: user wanted to see the specific move play out, not a jump across the whole game.
+Alternatives considered: none — direct clarification of the previous fix's scope.
+Affects: `GameViewerPage.jsx`, `ClockPage.jsx`.
+
+---
+
 ## D-023 — Deep-linked moves now animate; black colour-dot contrast fixed
 Date: 2026-09-20
 Phase: 2
