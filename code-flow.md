@@ -17,6 +17,12 @@ Four kinds of files, and what each kind is for:
   one page.
 - **`hooks/`** — shared "memory" that more than one page needs to read from the same place.
 
+Everything above lives in `/frontend` — plain React code that runs in the browser. As of Phase 3
+there's also **`/server`**, a completely separate small Express app: the one place allowed to hold
+the Mongo password, because a browser can never keep a secret (anyone can open dev tools). The
+frontend never talks to Mongo or Google's verification API directly — it always goes through
+`/server` first.
+
 ---
 
 ## 1. Fetching games from Chess.com
@@ -185,6 +191,45 @@ The move list also shows each move's thinking time now: `GameViewerPage` calls b
 walk the exact same list of moves in the exact same order, it can just look up `clockMoves[index]`
 for whatever move `moves[index]` is — no separate matching logic needed.
 
+## 4c. Signing in and remembering your username
+
+**Files involved:** `components/GoogleSignInButton.jsx` → `lib/backendApi.js` → `/server/auth.js` →
+`/server/db.js` (Mongo) and `/server/jwt.js`
+
+This is the one part of the app where the browser is NOT allowed to hold a secret (the Mongo
+password), so a real backend — `/server`, a plain Express app, separate from `/frontend` — is
+involved for the first time. Here's the whole trip, end to end:
+
+1. **The button itself doesn't do much.** `GoogleSignInButton.jsx` just waits for Google's own
+   script (loaded in `index.html`) to be ready, then hands rendering off to Google entirely —
+   `window.google.accounts.id.renderButton(...)`. When someone actually signs in through it, Google
+   calls back with a `credential`, which is really just a signed token proving "this really is
+   [email] and Google vouches for it." We never see a password.
+2. **That credential goes to our backend**, not straight into use — `backendApi.js` POSTs it to
+   `/server`'s `/api/auth/google`. This step matters: anyone could fake a credential-looking string
+   in the browser's network tab, so the actual trust decision has to happen somewhere the user can't
+   tamper with it, which is the server.
+3. **The server checks it's real.** `auth.js` hands the credential to `google-auth-library`'s
+   `verifyIdToken`, which cryptographically confirms Google actually issued this token, and that it
+   was issued for *our* app specifically (checked against `GOOGLE_CLIENT_ID`) and not some other
+   site. This one check is the entire security boundary of "sign in with Google."
+4. **The server finds or creates a user row** in Mongo's `users` collection, keyed by Google's own
+   stable id for that account (`googleSub`) — so signing in again later matches the same row, even
+   if the person's Google display name changes.
+5. **The server issues its OWN login token** (`jwt.js`) — unrelated to Google's token, just
+   `{userId}` signed with a secret only our server knows (`JWT_SECRET`) — and sends it back as an
+   `httpOnly` cookie. "httpOnly" means frontend JavaScript can never read this cookie's value even if
+   it wanted to; the browser just automatically attaches it to future requests to `/server`. This is
+   what makes you "stay signed in" without Google being involved again.
+6. **On every later visit**, `useAuth.js` calls `GET /api/me` on mount. The server reads that cookie,
+   checks the signature is still valid and not expired, loads the matching user, and sends back
+   `{email, name, chessComUsername}` — never the raw database row. If there's a saved
+   `chessComUsername`, `App.jsx` fills the username field in and triggers a fetch automatically,
+   which is the entire point of Phase 3: nothing to retype on a return visit.
+7. **Guest-to-account migration** is just: if you'd already typed a username as a guest, and you
+   then sign in, `App.jsx` saves that typed username to your new account right away (`PUT
+   /api/profile`) instead of only saving on the next manual fetch.
+
 ## 5. Showing evidence for a finding
 
 **Files involved:** `components/GameEvidenceList.jsx`
@@ -207,3 +252,5 @@ Pick the feature, then read the files in this order — each one calls into the 
 - **Tilt:** `sessions.js` → `tilt.js` → `TiltPage.jsx` → `GameEvidenceList.jsx`
 - **Clock:** `clockData.js` → `clockFingerprint.js` → `ClockPage.jsx`
 - **Time-class filter:** `timeClass.js` → `useFetchedGames.js` → `TimeClassTabs.jsx` (rendered by `App.jsx`)
+- **Sign-in:** `GoogleSignInButton.jsx` → `backendApi.js` → `/server/auth.js` → `/server/jwt.js` +
+  `/server/db.js` → back to `useAuth.js` on the next `/api/me` check

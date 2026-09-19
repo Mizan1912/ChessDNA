@@ -6,6 +6,49 @@ here.
 
 ---
 
+## D-028 — Session design: httpOnly JWT cookie, 30 days, SameSite=Lax
+Date: 2026-09-20
+Phase: 3
+Decided by: agent
+Needs review: yes
+
+What: After Google verifies who someone is (`google-auth-library`'s `verifyIdToken`, checked against
+our own `GOOGLE_CLIENT_ID` as the audience — this is the actual security boundary), `/server` issues
+its own JWT (just `{userId}`, signed with `JWT_SECRET`) in an httpOnly cookie named `session`,
+30-day expiry, `SameSite=Lax`, `secure` only when `NODE_ENV=production` (browsers reject `secure`
+cookies over plain http, which local dev is). The `users` collection is keyed by `googleSub` (the
+stable Google account id), storing `email`, `name`, `chessComUsername` (null until saved),
+`createdAt`, `lastLoginAt`. `/api/me` never returns the raw Mongo document — only
+`{email, name, chessComUsername}` — so nothing beyond that reaches the browser.
+Why: matches the build doc's own stated design ("Signed JWT in an httpOnly cookie — no session
+store, nothing extra to run"). 30 days chosen as a reasonable "don't make people re-login constantly"
+default; not user-specified, flagged for review.
+Alternatives considered: a server-side session store (Redis/Mongo-backed sessions) — rejected, the
+doc explicitly says no session store is needed for this design.
+Affects: `server/auth.js`, `server/jwt.js`, `server/index.js`.
+
+---
+
+## D-027 — Backend switched from Vercel serverless functions to a standalone Express server
+Date: 2026-09-20
+Phase: 3
+Decided by: user
+
+What: The build doc's locked tech stack specified "3-4 serverless functions in an /api folder"
+deployed on Vercel. User instead wants a real, independently-hostable Express server (not tied to
+Vercel's function model), so it can be deployed wherever, not just Vercel. This is a deliberate
+override of a stack choice the doc calls "locked" — flagging it explicitly since the doc says any
+such swap needs a decision.md entry and a heads-up, not a silent change.
+Why: user wants the freedom to host the backend independently of Vercel later.
+Alternatives considered: staying with Vercel functions (the doc's original plan) — user chose
+Express instead, deliberately.
+Affects: new `/server` directory (Express app, its own `package.json`, separate from `/frontend`)
+replaces the planned `/api` Vercel-functions folder. `/api/README.md`'s "untouched until Phase 3"
+placeholder is now stale — `/api` is not used at all going forward. `vercel.json` (never created)
+is no longer needed unless the frontend alone ever deploys to Vercel later.
+
+---
+
 ## D-026 — Fix: games list caused horizontal page overflow on mobile
 Date: 2026-09-20
 Phase: 1 (bug found while re-testing after D-025)

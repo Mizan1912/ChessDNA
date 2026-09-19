@@ -20,9 +20,12 @@ export function useFetchedGames() {
   const [errorMessage, setErrorMessage] = useState("");
   const [timeClassFilter, setTimeClassFilter] = useState("all");
 
-  async function fetchGames(event) {
-    event.preventDefault();
-    const trimmedUsername = username.trim();
+  // `usernameOverride` lets a caller trigger a fetch right after setting the
+  // username programmatically (e.g. restoring a saved username on sign-in),
+  // without waiting a render cycle for `username` state to catch up.
+  async function fetchGames(event, usernameOverride) {
+    event?.preventDefault();
+    const trimmedUsername = (usernameOverride ?? username).trim();
     if (!trimmedUsername) return;
 
     setStatus("loading");

@@ -44,6 +44,20 @@ currently on. No routing library is in use yet — the app is four screens toggl
 `App.jsx`. `react-router` (locked in the tech stack) will be introduced once there are enough
 screens that back/forward browser navigation and shareable URLs actually matter.
 
+5. **Signing in** — top-right of the header shows a "Sign in with Google" button when signed out, or
+   your name plus a "Sign out" button when signed in. Signing in doesn't gate anything — the app
+   works exactly the same as a guest. What signing in actually does: your Chess.com username gets
+   saved, so on your *next* visit (a real return visit, cookie already set) the app automatically
+   fills it in and fetches your games without you typing anything. If you type a username as a guest
+   and *then* sign in, that username is carried over to your new account instead of being lost.
+
+## 1a. What's saved, and where
+
+Nothing about your games themselves is saved — only your Chess.com username, tied to your Google
+account, in MongoDB Atlas. Every tilt/clock finding is still recomputed fresh from Chess.com on each
+visit; nothing about your "DNA" (blind spots, structures, etc. — those come in later phases) exists
+yet to be saved.
+
 ## 2. Data flow
 
 ```mermaid
@@ -62,12 +76,18 @@ flowchart TD
   Viewer --> PgnToMoves[pgnToMoves.js: chess.js replay]
   PgnToMoves --> Board[react-chessboard]
 
-  APIFolder[/api functions - empty/] -.->|not used yet| DB[(MongoDB Atlas - not connected)]
+  GoogleBtn[GoogleSignInButton] -->|credential| BackendApi[backendApi.js]
+  BackendApi -->|POST /api/auth/google, credentials include| Server[/server: Express/]
+  Server -->|verifyIdToken| Google[(Google Identity Services)]
+  Server -->|upsert user, read/write chessComUsername| Mongo[(MongoDB Atlas)]
+  Server -->|sets httpOnly session cookie| GoogleBtn
+  Hook -.->|on mount: GET /api/me, restores saved username| BackendApi
 ```
 
-Nothing is persisted anywhere yet — games live only in React state for the current page load.
-`/api` has no functions in it. No database connection exists. No engine is involved (no evaluation,
-no move quality).
+Games themselves are never persisted — fetched fresh from Chess.com every visit, living only in
+React state for that page load. What Mongo stores: one document per signed-in user (email, name,
+`chessComUsername`). No engine is involved yet (no evaluation, no move quality) — that starts in
+Phase 4.
 
 ## 3. File map
 
@@ -92,16 +112,25 @@ no move quality).
 | `/frontend/src/lib/clockFingerprint.js` | Opening time share, longest think, games lost on time, known-position wasted time. |
 | `/frontend/src/pages/ClockPage.jsx` + `.css` | Feature 3 (partial — see D-020): the four clock findings above, evidence-linked. |
 | `/frontend/src/components/TimeClassTabs.jsx` + `.css` | Shared bullet/blitz/rapid/daily filter, rendered once in `App.jsx`, applies to every page. |
-| `/api` | Serverless functions (Vercel convention). Empty — untouched until Phase 3. |
-| `.env.example` / `.env` | `VITE_CHESSCOM_API_BASE_URL` today; more added only when the code reading them exists. |
+| `/frontend/src/components/GoogleSignInButton.jsx` | Wraps Google Identity Services' own button; calls back with the credential to send to `/server`. |
+| `/frontend/src/hooks/useAuth.js` | Who's signed in — checks for an existing session on load, exposes `signIn`/`signOut`. |
+| `/frontend/src/lib/backendApi.js` | All calls to `/server` (sign-in, sign-out, `/api/me`, saving the Chess.com username). |
+| `/server` | Standalone Express backend (see D-027 — chosen over Vercel functions so it can be hosted independently). Its own `package.json`, run with `npm run dev` inside `/server`. |
+| `/server/index.js` | Express app setup, CORS, cookie parsing, route wiring. |
+| `/server/db.js` | One shared MongoDB connection for the process's lifetime. |
+| `/server/jwt.js` | Signs/verifies our own session token (not Google's) — see D-028. |
+| `/server/auth.js` | Verifies a Google credential, upserts the `users` collection, issues the session cookie, `/api/me`, `requireAuth` middleware. |
+| `/server/profile.js` | Saves the signed-in user's Chess.com username. |
+| `.env.example` / `.env` | Chess.com API base URL, Google Client ID, MongoDB URI, JWT secret, CORS origin, API base URL, server port. |
 | `decision.md` | Log of every real decision made on this project, newest first. |
 | `flow.md` | This file — current app state, rewritten each phase. |
 | `rnd.md` | Open questions and things flagged for the user to research outside this chat. |
 
 ## 4. Built / not built
 
-- [x] Phase 0 — Setup: repo skeleton, `/frontend` scaffold, `/api` placeholder, `.gitignore`,
-      `.env.example`, `decision.md`, `flow.md`, `rnd.md` created.
+- [x] Phase 0 — Setup: repo skeleton, `/frontend` scaffold, `.gitignore`, `.env.example`,
+      `decision.md`, `flow.md`, `rnd.md` created. (The original `/api` placeholder from this phase
+      was later removed — see D-027, backend became `/server` instead.)
 - [ ] Phase 0 — Deploy to Vercel (paused, see D-005 in `decision.md`)
 - [x] Phase 1 — Chess.com: fetch games, list, game viewer with move-by-move playback, design system
 - [ ] Phase 1 — Lichess (parked, see D-011 in `decision.md`)
@@ -109,7 +138,10 @@ no move quality).
 - [x] Phase 2 — Clock fingerprint (Feature 3, partial): opening time share, longest think, time
       losses, known-position waste. Engine-dependent parts deferred to Phase 4, see D-020.
 - [x] Phase 2 — Time-class filter (bullet/blitz/rapid/daily), shared across every page, see D-019
-- [ ] Phase 3 — Login and saving
+- [x] Phase 3 — Login and saving: Google sign-in, Express backend, MongoDB, username persistence,
+      guest-to-account migration, auto-restore on return visit. Plumbing fully verified by an
+      automated test (session cookie + Mongo + auto-fetch); the actual Google OAuth click-through
+      needs your real browser (see RQ-001 in `rnd.md`).
 - [ ] Phase 4 — Stockfish (blunder detection)
 - [ ] Phase 4B — Game review (move labels, accuracy)
 - [ ] Phase 5 — Tagging and baseline
