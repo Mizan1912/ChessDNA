@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { pgnToMoves, STARTING_FEN } from "../lib/pgnToMoves";
 import { pgnToClockMoves } from "../lib/clockData";
@@ -27,11 +27,23 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1 }) 
     }
   }, [game.pgn]);
 
-  // -1 means "starting position, before move 1"
-  const [moveIndex, setMoveIndex] = useState(initialMoveIndex);
+  // -1 means "starting position, before move 1". Always MOUNT at the start,
+  // even when a finding wants to open on a specific move — react-chessboard
+  // only animates a piece sliding when the position CHANGES, not on first
+  // mount, so jumping straight to the target position on mount would just
+  // show it frozen there with no motion. Moving to it a tick after mount
+  // turns that into a real, visible slide.
+  const [moveIndex, setMoveIndex] = useState(-1);
   const [boardOrientation, setBoardOrientation] = useState(
     game.userColor === "black" ? "black" : "white"
   );
+
+  useEffect(() => {
+    if (initialMoveIndex === -1) return;
+    const timer = setTimeout(() => setMoveIndex(initialMoveIndex), 50);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // only on mount — this is a one-time "arrive here" animation, not a live sync
 
   const currentFen = moveIndex === -1 ? STARTING_FEN : moves[moveIndex].fenAfter;
 

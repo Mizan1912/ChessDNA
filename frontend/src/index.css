@@ -124,4 +124,8 @@ th {
 
 .color-dot.black {
   background: #1a1a1a;
+  /* A near-black dot needs a visible ring against this near-black
+     background, or it just disappears — the default border colour is too
+     close to the page background to read as a circle at all. */
+  border-color: var(--color-text-muted);
 }

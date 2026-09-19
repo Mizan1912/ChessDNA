@@ -6,6 +6,28 @@ here.
 
 ---
 
+## D-023 — Deep-linked moves now animate; black colour-dot contrast fixed
+Date: 2026-09-20
+Phase: 2
+Decided by: user
+
+What: Two fixes:
+1. Opening the viewer via a finding's "see that position" link previously landed directly on the
+   target move with no animation — react-chessboard only animates a piece sliding when its
+   `position` prop *changes*, not on first mount, so jumping straight there on mount just showed it
+   frozen in place. `GameViewerPage` now always mounts at the start of the game, then moves to the
+   target position ~50ms later via a `useEffect`, turning it into a real, visible slide. Confirmed
+   via Playwright that a `transition: transform` style now appears on the moved piece.
+2. The black colour-dot (used in the games list "You" column and the viewer's meta line) was nearly
+   invisible — a near-black fill with a border colour almost identical to the page's own near-black
+   background. Its border now uses the muted-text colour instead, giving it a visible ring.
+Why: user reported the deep-link animation "must work" and that colour distinction needed to be
+better — both were real, confirmed defects, not just preference.
+Alternatives considered: none — both are straightforward fixes once diagnosed.
+Affects: `frontend/src/pages/GameViewerPage.jsx`, `frontend/src/index.css`.
+
+---
+
 ## D-022 — Show which colour the player had, in the list and the viewer
 Date: 2026-09-20
 Phase: 1/2 (games list + viewer, retroactive addition)
