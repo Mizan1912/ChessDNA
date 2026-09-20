@@ -3,9 +3,9 @@ import { Chessboard } from "react-chessboard";
 import { pgnToMoves, STARTING_FEN } from "../lib/pgnToMoves";
 import "./GamesListPage.css";
 
-const MIN_GAMES = 3;
+const MIN_GAMES = 1;
 const MAX_GAMES = 100;
-const GAMES_STEP = 10;
+const GAMES_STEP = 1;
 
 function formatDate(timestampMs) {
   return new Date(timestampMs).toLocaleDateString();
