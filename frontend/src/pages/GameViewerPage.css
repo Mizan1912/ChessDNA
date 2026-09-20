@@ -33,10 +33,22 @@
   align-items: flex-start;
 }
 
+.board-column {
+  flex-shrink: 0;
+}
+
+/* align-items: stretch is what makes the evaluation bar exactly as tall as
+   the board next to it, at whatever size the board ends up. */
+.board-row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
 .board-panel {
   width: 420px;
   max-width: 100%;
-  flex-shrink: 0;
+  flex-shrink: 1;
   padding: 0.75rem;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -54,6 +66,17 @@
 @media (max-width: 720px) {
   .viewer-layout {
     flex-direction: column;
+  }
+
+  .board-column {
+    width: 100%;
+  }
+
+  /* On a phone the bar goes under the board (flat, full width) rather than
+     beside it, so the board itself keeps the whole screen width. */
+  .board-row {
+    flex-direction: column-reverse;
+    gap: 0.5rem;
   }
 
   .board-panel {
@@ -105,6 +128,76 @@
 .move-time {
   color: var(--color-text-muted);
   font-size: 0.75rem;
+}
+
+/* Move-quality labels.
+   These are the one place in the app that deliberately breaks the "exactly
+   one accent colour" rule — see decision.md D-035. A good move and a blunder
+   have to be distinguishable at a glance, and every chess site in existence
+   uses colour to do it. */
+.move-label {
+  margin-left: 0.25rem;
+  font-weight: 600;
+  font-size: 0.8rem;
+}
+
+.label-brilliant { color: #35c4b5; }
+.label-great { color: #6a9ee8; }
+.label-best { color: #8bc34a; }
+.label-excellent { color: #7aa653; }
+.label-good { color: var(--color-text-muted); }
+.label-inaccuracy { color: #e0b641; }
+.label-mistake { color: #e08b41; }
+.label-miss { color: #e07a41; }
+.label-blunder { color: #d15b55; }
+
+/* The bigger "Nf3 is Brilliant" line under the board. */
+.move-label-banner {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.move-label-glyph {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.move-label-best {
+  color: var(--color-text-muted);
+}
+
+.review-controls {
+  margin-bottom: 0.75rem;
+  font-size: 0.85rem;
+  min-height: 1.9rem;
+  display: flex;
+  align-items: center;
+}
+
+.review-progress,
+.review-accuracy {
+  color: var(--color-text-muted);
+}
+
+.exploring-banner {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.7rem;
+  background: var(--color-surface);
+  border-left: 2px solid var(--color-accent);
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.exploring-banner strong {
+  font-family: var(--font-mono);
+  font-weight: 500;
 }
 
 .move-list button.active .move-time {

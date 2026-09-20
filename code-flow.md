@@ -326,6 +326,43 @@ without checking it on the board first — a confidently wrong "this hangs your 
 trust in everything else the app says, which is exactly the reasoning the build doc gives for
 keeping the "Brilliant" label strict.
 
+## 4g. The analysis board: evaluation bar, move labels, playing your own moves
+
+**Files involved:** `hooks/useLiveEval.js` + `components/EvalBar.jsx` (the bar),
+`lib/reviewGame.js` + `lib/moveLabels.js` + `hooks/useGameReview.js` (the labels), and
+`pages/GameViewerPage.jsx` tying all three together.
+
+Three separate things share one screen, and they work quite differently:
+
+1. **The evaluation bar is live and cheap.** It runs its own depth-12 evaluation of whatever
+   position is currently showing, which takes well under a tenth of a second, and redoes it every
+   time the position changes. It deliberately does *not* wait for a full review — if it did, there
+   would be no bar at all until you'd sat through a 45-second analysis. If a review *has* been run,
+   the bar quietly prefers that deeper number for positions belonging to the real game.
+   - One subtlety: stepping quickly through moves asks for evaluations faster than the engine can
+     answer them. Answers that come back for a position you've already left are thrown away rather
+     than flickering onto the bar.
+2. **Playing your own moves branches off rather than editing anything.** Dragging a piece runs the
+   move through chess.js; if it's legal, the resulting position is stored separately as "exploring",
+   and the board shows that instead of the game. The game itself is never modified — one click puts
+   it back. The bar follows you into your own line, which is the entire point of an analysis board.
+3. **The move labels need a full review, so they're opt-in.** `reviewGame.js` walks every position
+   in the game, asking the engine for its top TWO moves each time. Two, specifically, because:
+   - the best line tells you what the player *should* have played, and
+   - the second-best tells you whether there was any other decent option at all. If the best move
+     is far better than the second best, then that move was the *only* move — and finding an only
+     move is what earns "Great". That's information you simply cannot get from a single line.
+
+   `moveLabels.js` then applies the doc's table in order, stopping at the first match, measuring
+   everything in win percentage rather than centipawns (same reasoning as the blunder scan).
+   "Brilliant" is held to a deliberately high bar: an only-move that also sacrifices real material
+   which is *not* immediately won back, leaving the position still playable. The doc warns this is
+   the label that embarrasses you, so when in doubt it downgrades to Great.
+
+**Why depth 14 and not the doc's 18:** measured, depth 18 with three lines took 208 seconds on one
+92-ply game. Depth 14 with two lines took 44.6 and produced practically the same verdicts. The
+numbers in the doc were a starting guess; these are what the machine actually does.
+
 ## 5. Showing evidence for a finding
 
 **Files involved:** `components/GameEvidenceList.jsx`
@@ -352,3 +389,5 @@ Pick the feature, then read the files in this order — each one calls into the 
   `/server/db.js` → back to `useAuth.js` on the next `/api/me` check
 - **Blunders:** `engine.js` → `blunderScan.js` (+ `winPercent.js`) → `useBlunderScan.js` →
   `BlundersPage.jsx`
+- **Evaluation bar:** `useLiveEval.js` → `engine.js`, rendered by `EvalBar.jsx`
+- **Move labels:** `reviewGame.js` → `moveLabels.js` → `useGameReview.js` → `GameViewerPage.jsx`

@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { pgnToMoves, STARTING_FEN } from "../lib/pgnToMoves";
 import { pgnToClockMoves } from "../lib/clockData";
+import { LABELS } from "../lib/moveLabels";
+import EvalBar from "../components/EvalBar";
+import { useLiveEval } from "../hooks/useLiveEval";
+import { useGameReview } from "../hooks/useGameReview";
 import "./GameViewerPage.css";
 
 function formatSeconds(seconds) {
@@ -37,6 +42,14 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
     game.userColor === "black" ? "black" : "white"
   );
 
+  // When you drag a piece, you leave the actual game and start exploring your
+  // own line. `exploring` holds that made-up position; null means "showing
+  // the real game". Kept separate so the game itself is never lost — one
+  // click puts it back.
+  const [exploring, setExploring] = useState(null);
+
+  const review = useGameReview();
+
   useEffect(() => {
     if (initialMoveIndex === -1) return;
     const timer = setTimeout(() => setMoveIndex(initialMoveIndex), 50);
@@ -44,7 +57,30 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // only on mount — this is a one-time "arrive here" animation, not a live sync
 
-  const currentFen = moveIndex === -1 ? STARTING_FEN : moves[moveIndex].fenAfter;
+  const gameFen = moveIndex === -1 ? STARTING_FEN : moves[moveIndex].fenAfter;
+  const currentFen = exploring?.fen ?? gameFen;
+
+  // The bar follows whatever is on the board, including positions you made up
+  // yourself while exploring.
+  const liveScoreCp = useLiveEval(currentFen);
+
+  // Once the game has been reviewed, prefer its deeper, more careful number
+  // for positions that are actually part of the game.
+  const reviewedScoreCp =
+    !exploring && review.review
+      ? moveIndex === -1
+        ? review.review.startingEval
+        : review.review.evalAfterPly[moveIndex]
+      : undefined;
+  const shownScoreCp = reviewedScoreCp ?? liveScoreCp;
+
+  const labelsByPly = useMemo(() => {
+    const map = new Map();
+    for (const m of review.review?.moves ?? []) map.set(m.plyIndex, m);
+    return map;
+  }, [review.review]);
+
+  const currentLabel = !exploring && moveIndex >= 0 ? labelsByPly.get(moveIndex) : null;
 
   // Keep the highlighted move visible. Matters most when arriving from a
   // finding: the move in question is often 30+ moves in, well outside the
@@ -54,20 +90,30 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
     activeMoveRef.current?.scrollIntoView({ block: "nearest" });
   }, [moveIndex]);
 
-  function goToStart() {
-    setMoveIndex(-1);
-  }
-  function goBack() {
-    setMoveIndex((i) => Math.max(-1, i - 1));
-  }
-  function goForward() {
-    setMoveIndex((i) => Math.min(moves.length - 1, i + 1));
-  }
-  function goToEnd() {
-    setMoveIndex(moves.length - 1);
+  function goTo(index) {
+    setExploring(null);
+    setMoveIndex(index);
   }
   function flipBoard() {
     setBoardOrientation((side) => (side === "white" ? "black" : "white"));
+  }
+
+  // Dragging a piece branches off into your own line rather than editing the
+  // game. Returns false for illegal moves so the piece snaps back.
+  function handlePieceDrop({ sourceSquare, targetSquare }) {
+    if (!targetSquare) return false;
+    try {
+      const board = new Chess(currentFen);
+      const played = board.move({ from: sourceSquare, to: targetSquare, promotion: "q" });
+      if (!played) return false;
+      setExploring({
+        fen: board.fen(),
+        line: [...(exploring?.line ?? []), played.san],
+      });
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   return (
@@ -88,39 +134,100 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
       {note && <p className="viewer-note">{note}</p>}
 
       <div className="viewer-layout">
-        <div className="board-panel">
-          <Chessboard options={{ position: currentFen, boardOrientation, allowDragging: false }} />
+        <div className="board-column">
+          {/* Bar and board sit in their own row so the bar can stretch to
+              exactly the board's height, whatever size it renders at. */}
+          <div className="board-row">
+            <EvalBar scoreCp={shownScoreCp} boardOrientation={boardOrientation} />
+            <div className="board-panel">
+              <Chessboard
+                options={{
+                  position: currentFen,
+                  boardOrientation,
+                  allowDragging: true,
+                  onPieceDrop: handlePieceDrop,
+                }}
+              />
+            </div>
+          </div>
+
+          {currentLabel && (
+            <p className={`move-label-banner ${LABELS[currentLabel.label].className}`}>
+              <span className="move-label-glyph">{LABELS[currentLabel.label].glyph}</span>
+              {currentLabel.san} is {LABELS[currentLabel.label].name}
+              {currentLabel.bestMoveSan && currentLabel.label !== "best" && currentLabel.label !== "brilliant" && (
+                <span className="move-label-best"> · best was {currentLabel.bestMoveSan}</span>
+              )}
+            </p>
+          )}
         </div>
 
         <div className="moves-panel">
           <div className="move-controls">
-            <button onClick={goToStart} disabled={moveIndex === -1}>
+            <button onClick={() => goTo(-1)} disabled={moveIndex === -1 && !exploring}>
               |&lt;
             </button>
-            <button onClick={goBack} disabled={moveIndex === -1}>
+            <button onClick={() => goTo(Math.max(-1, moveIndex - 1))} disabled={moveIndex === -1 && !exploring}>
               &lt;
             </button>
-            <button onClick={goForward} disabled={moveIndex === moves.length - 1}>
+            <button
+              onClick={() => goTo(Math.min(moves.length - 1, moveIndex + 1))}
+              disabled={moveIndex === moves.length - 1 && !exploring}
+            >
               &gt;
             </button>
-            <button onClick={goToEnd} disabled={moveIndex === moves.length - 1}>
+            <button onClick={() => goTo(moves.length - 1)} disabled={moveIndex === moves.length - 1 && !exploring}>
               &gt;|
             </button>
             <button onClick={flipBoard}>Flip board</button>
           </div>
 
+          {exploring ? (
+            <p className="exploring-banner">
+              Exploring your own line: <strong>{exploring.line.join(" ")}</strong>
+              <button onClick={() => setExploring(null)}>Back to the game</button>
+            </p>
+          ) : (
+            <div className="review-controls">
+              {review.status === "idle" && (
+                <button onClick={() => review.run(game)}>Review this game</button>
+              )}
+              {review.status === "reviewing" && (
+                <span className="review-progress">
+                  Reviewing… move {Math.ceil(review.progress.plyDone / 2)} of{" "}
+                  {Math.ceil(review.progress.totalPlies / 2)}
+                </span>
+              )}
+              {review.status === "error" && <span className="error-message">Review failed.</span>}
+              {review.status === "done" && review.review?.accuracy && (
+                <span className="review-accuracy">
+                  Accuracy — white {review.review.accuracy.white}, black {review.review.accuracy.black}
+                </span>
+              )}
+            </div>
+          )}
+
           <ol className="move-list">
             {moves.map((move, index) => {
               const timeLabel = formatSeconds(clockMoves[index]?.timeSpentSeconds ?? null);
+              const labelled = labelsByPly.get(index);
               return (
                 <li key={index}>
                   <button
                     ref={index === moveIndex ? activeMoveRef : null}
-                    className={index === moveIndex ? "active" : ""}
-                    onClick={() => setMoveIndex(index)}
+                    className={index === moveIndex && !exploring ? "active" : ""}
+                    onClick={() => goTo(index)}
                   >
                     {move.color === "w" ? `${move.moveNumber}. ` : ""}
                     {move.san}
+                    {labelled && (
+                      <span
+                        className={`move-label ${LABELS[labelled.label].className}`}
+                        title={LABELS[labelled.label].name}
+                      >
+                        {LABELS[labelled.label].glyph}
+                      </span>
+                    )}
                     {timeLabel && <span className="move-time"> {timeLabel}</span>}
                   </button>
                 </li>

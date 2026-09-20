@@ -31,6 +31,11 @@ export class Engine {
   #worker = null;
   #pendingLineHandler = null;
   #readyPromise = null;
+  #multiPv = 1;
+  // The engine handles exactly one search at a time, and each search claims
+  // the single line handler. Without serialising, a second evaluate() call
+  // would steal the handler and leave the first promise hanging forever.
+  #queue = Promise.resolve();
 
   async start() {
     if (this.#readyPromise) return this.#readyPromise;
@@ -69,35 +74,69 @@ export class Engine {
     this.#worker.postMessage(command);
   }
 
-  // Evaluates one position and resolves with { scoreCp, bestMove }, where
-  // scoreCp is always from White's point of view (positive = White better).
-  // Only one of these can be in flight at a time — see analyseGames(), which
-  // awaits each call in turn.
-  async evaluate(fen, depth) {
+  // Asks the engine for more than one candidate line at a time. Needed to
+  // tell "the only good move" apart from "one of several fine moves", which
+  // is the whole basis of the Great and Brilliant labels. Costs speed, so
+  // the bulk blunder scan leaves it at 1.
+  async #setMultiPv(count) {
+    if (this.#multiPv === count) return;
+    this.#multiPv = count;
+    this.#send(`setoption name MultiPV value ${count}`);
+  }
+
+  // Evaluates one position. Resolves with { scoreCp, bestMove, lines }, where
+  // every score is from White's point of view (positive = White better), and
+  // `lines` holds the top `multiPv` candidate moves, best first.
+  // Only one of these can be in flight at a time — callers await each in turn.
+  evaluate(fen, depth, multiPv = 1) {
+    // Chain onto whatever is already running, so calls queue up instead of
+    // trampling each other.
+    const result = this.#queue.then(() => this.#evaluateNow(fen, depth, multiPv));
+    this.#queue = result.catch(() => {}); // a failed search shouldn't block the queue
+    return result;
+  }
+
+  async #evaluateNow(fen, depth, multiPv) {
     await this.start();
+    await this.#setMultiPv(multiPv);
 
     return new Promise((resolve) => {
-      let latestScoreCp = 0;
+      // Keyed by multipv index (1 = best line, 2 = second best, ...). The
+      // engine re-sends these at every depth, so later lines overwrite
+      // earlier, shallower ones.
+      const bestByRank = new Map();
+      const flip = whoseTurn(fen) === "black";
 
       this.#pendingLineHandler = (line) => {
         // Score lines look like:
-        //   info depth 12 ... score cp -45 ... pv e2e4 e7e5
-        //   info depth 12 ... score mate 3 ... pv ...
+        //   info depth 12 ... multipv 1 ... score cp -45 ... pv e2e4 e7e5
+        //   info depth 12 ... multipv 2 ... score mate 3 ... pv ...
         const cpMatch = line.match(/score cp (-?\d+)/);
         const mateMatch = line.match(/score mate (-?\d+)/);
-        if (mateMatch) {
-          latestScoreCp = mateToCentipawns(Number(mateMatch[1]));
-        } else if (cpMatch) {
-          latestScoreCp = Number(cpMatch[1]);
+        const pvMatch = line.match(/ pv (\S+)/);
+
+        if (cpMatch || mateMatch) {
+          const rank = Number(line.match(/multipv (\d+)/)?.[1] ?? 1);
+          const raw = mateMatch ? mateToCentipawns(Number(mateMatch[1])) : Number(cpMatch[1]);
+          bestByRank.set(rank, {
+            scoreCp: flip ? -raw : raw,
+            move: pvMatch?.[1] ?? null,
+            isMate: Boolean(mateMatch),
+          });
         }
 
         // "bestmove xxxx" is the engine saying it's done with this position.
         const bestMoveMatch = line.match(/^bestmove (\S+)/);
         if (bestMoveMatch) {
           this.#pendingLineHandler = null;
-          const fromWhitePerspective =
-            whoseTurn(fen) === "black" ? -latestScoreCp : latestScoreCp;
-          resolve({ scoreCp: fromWhitePerspective, bestMove: bestMoveMatch[1] });
+          const lines = [...bestByRank.entries()]
+            .sort(([a], [b]) => a - b)
+            .map(([, value]) => value);
+          resolve({
+            scoreCp: lines[0]?.scoreCp ?? 0,
+            bestMove: bestMoveMatch[1],
+            lines,
+          });
         }
       };
 
@@ -111,5 +150,6 @@ export class Engine {
     this.#worker = null;
     this.#readyPromise = null;
     this.#pendingLineHandler = null;
+    this.#multiPv = 1; // a fresh worker starts at the engine's own default
   }
 }

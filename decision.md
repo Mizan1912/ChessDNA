@@ -6,6 +6,80 @@ here.
 
 ---
 
+## D-036 — Evaluation bar runs live and shallow, separate from the deep review
+Date: 2026-09-20
+Phase: 4B
+Decided by: agent
+
+What: The bar beside the board is fed by its own quick depth-12 evaluation of whatever position is
+showing (`hooks/useLiveEval.js`), refreshed as you step through moves or play your own. It does NOT
+wait for a game review. Once a review has been run, the bar prefers the review's deeper number for
+positions that are part of the actual game, and falls back to the live one everywhere else
+(including positions you invented while exploring).
+Why: the user asked for the bar "everywhere". Making it depend on a 45-second review would mean no
+bar at all until you'd waited — but a single position evaluates in well under a tenth of a second,
+so live evaluation gives an instant bar with no waiting. Two sources, each used where it's better.
+Also fixed a real bug this exposed: `Engine.evaluate()` had no queueing, so a second call while one
+was running stole the response handler and left the first promise pending forever. Stepping quickly
+through a game would have triggered exactly that. Calls are now serialised.
+Affects: `hooks/useLiveEval.js` (new), `components/EvalBar.jsx`/`.css` (new), `lib/engine.js`
+(queueing), `pages/GameViewerPage.jsx`.
+
+---
+
+## D-035 — Move-quality labels use semantic colour, breaking the one-accent rule
+Date: 2026-09-20
+Phase: 4B
+Decided by: agent
+Needs review: yes
+
+What: The move labels (Brilliant / Great / Best / Excellent / Good / Inaccuracy / Mistake / Miss /
+Blunder) each get their own colour — teal, blue, green through yellow, orange, red — rather than the
+single accent colour the design direction otherwise insists on.
+Why: the build doc's design rules say "exactly one accent colour for findings and warnings. Not
+two." This deliberately breaks that, because the label set is a *scale from good to bad* and colour
+is how that scale is read at a glance; every chess site does it this way, and the user explicitly
+asked for the Chess.com-style tags. The rule's real target is decorative colour and gradients, not
+functional encoding of meaning. Glyphs (!!, ★, ?!, ??) carry the same information, so the meaning
+survives for anyone who can't distinguish the colours.
+Alternatives considered: accent-only with glyphs doing all the work (rejected — a blunder and a
+brilliancy would look identical at a glance, which defeats the point).
+Affects: `lib/moveLabels.js`, `pages/GameViewerPage.css`.
+
+---
+
+## D-034 — Game review (Phase 4B): depth 14 / MultiPV 2, and no "Book" label
+Date: 2026-09-20
+Phase: 4B
+Decided by: agent
+Needs review: yes
+
+What: `lib/reviewGame.js` runs the doc's "deep review" mode over a single game — every position
+evaluated, every move labelled by the Feature 7 table, plus an accuracy score for both sides. Three
+deviations from the spec, all deliberate:
+1. **Depth 14 with 2 lines, not depth 18 with 3.** The doc's table specifies 18/3 and budgets
+   "20-40 seconds" for a review. Measured, that combination took **208 seconds** on a 92-ply game —
+   unusable. At 14/2 the same game takes **44.6 seconds**, and the output barely moves: same
+   blunder found, same 95/95 accuracy, label counts within one or two (36 Best vs 35, 10 Great vs
+   11). Nearly five times faster for no meaningful loss of judgement.
+2. **MultiPV 2 rather than 3.** The second line is the only one actually used — it's what tells an
+   "only move" apart from one of several good ones, which is the basis of Great and Brilliant. A
+   third line would cost time and change nothing.
+3. **No "Book" label.** The doc defines it as "position still matches the opening file" — we have
+   no opening file. Approximating it by move number would be wrong, since it would stamp "Book" on
+   genuine early blunders. Omitted rather than faked; early theory moves simply get labelled Best
+   or Excellent, which they are.
+Brilliant is kept deliberately strict per the doc's warning ("the label that will embarrass you"):
+it requires an only-move AND a net material sacrifice of 3+ that is NOT won straight back (checked
+against the position after the opponent's best reply) AND the position still being level or better
+afterwards. Anything short of that downgrades to Great.
+Not built: the doc's IndexedDB caching of finished reviews. Reviews are recomputed if you reopen a
+game. Worth adding — 45 seconds is a long time to repeat — but it's a separate piece of work.
+Affects: `lib/reviewGame.js` (new), `lib/moveLabels.js` (new), `hooks/useGameReview.js` (new),
+`lib/engine.js` (MultiPV support), `pages/GameViewerPage.jsx`.
+
+---
+
 ## D-033 — Blunders explain themselves; scan results survive navigation
 Date: 2026-09-20
 Phase: 4
