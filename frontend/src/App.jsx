@@ -8,6 +8,7 @@ import OnboardingPage from "./pages/OnboardingPage";
 import TimeClassTabs from "./components/TimeClassTabs";
 import GoogleSignInButton from "./components/GoogleSignInButton";
 import { useFetchedGames } from "./hooks/useFetchedGames";
+import { useBlunderScan } from "./hooks/useBlunderScan";
 import { useAuth } from "./hooks/useAuth";
 import { saveChessComUsername } from "./lib/backendApi";
 import "./App.css";
@@ -27,6 +28,10 @@ function App() {
   const [activeView, setActiveView] = useState("list");
   const fetched = useFetchedGames();
   const auth = useAuth();
+  // Lives up here, not inside BlundersPage: opening a game from the blunder
+  // list unmounts that page, and a scan takes minutes — losing the results
+  // just for looking at one of them would be miserable.
+  const blunderScan = useBlunderScan();
 
   // The onboarding screen (sign in, or continue as guest) shows until it's
   // explicitly dismissed by completing one of those two paths — a signed-in
@@ -107,8 +112,10 @@ function App() {
     }
   }
 
-  function openGame(game, moveIndex = -1) {
-    setOpenedGame({ game, moveIndex });
+  // `note` is an optional sentence explaining why this position matters
+  // (e.g. why a move was a blunder), shown above the board.
+  function openGame(game, moveIndex = -1, note = null) {
+    setOpenedGame({ game, moveIndex, note });
   }
 
   if (!auth.checkedSession) {
@@ -133,6 +140,7 @@ function App() {
         <GameViewerPage
           game={openedGame.game}
           initialMoveIndex={openedGame.moveIndex}
+          note={openedGame.note}
           onBack={() => setOpenedGame(null)}
         />
       );
@@ -145,7 +153,12 @@ function App() {
     }
     if (activeView === "blunders") {
       return (
-        <BlundersPage games={fetched.filteredGames} onBack={() => setActiveView("list")} onOpenGame={openGame} />
+        <BlundersPage
+          games={fetched.filteredGames}
+          scan={blunderScan}
+          onBack={() => setActiveView("list")}
+          onOpenGame={openGame}
+        />
       );
     }
     return (

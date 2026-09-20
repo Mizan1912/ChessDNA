@@ -15,6 +15,18 @@
   margin-left: 0.5rem;
 }
 
+/* The "why was this a blunder" sentence, when the viewer was opened from a
+   finding rather than from the plain games list. */
+.viewer-note {
+  margin: 0 0 1.25rem;
+  padding: 0.7rem 0.9rem;
+  border-left: 2px solid var(--color-accent);
+  background: var(--color-surface);
+  color: var(--color-text);
+  max-width: 640px;
+  line-height: 1.5;
+}
+
 .viewer-layout {
   display: flex;
   gap: 1.5rem;

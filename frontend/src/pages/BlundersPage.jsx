@@ -1,4 +1,3 @@
-import { useBlunderScan } from "../hooks/useBlunderScan";
 import "./BlundersPage.css";
 
 // Roughly how long a scan takes, measured at depth 12 on real games (see
@@ -6,13 +5,19 @@ import "./BlundersPage.css";
 // to a multi-minute scan — never presented as a precise number.
 const SECONDS_PER_GAME = 3.5;
 
-function formatEval(centipawns) {
-  const pawns = centipawns / 100;
-  return `${pawns > 0 ? "+" : ""}${pawns.toFixed(1)}`;
-}
+// Short labels for the table; the full sentence shows on the board screen.
+const TAG_LABELS = {
+  "missed-mate": "Missed mate",
+  "allows-mate": "Allows mate",
+  "loses-material": "Loses material",
+  "hangs-piece": "Hangs a piece",
+  positional: "Loses the advantage",
+};
 
-export default function BlundersPage({ games, onBack, onOpenGame }) {
-  const { status, progress, blunders, scan } = useBlunderScan();
+// `scan` is owned by App.jsx, not this page — see the note there. It has to
+// outlive this component, since clicking into a blunder unmounts it.
+export default function BlundersPage({ games, scan: scanState, onBack, onOpenGame }) {
+  const { status, progress, blunders, scan } = scanState;
 
   const estimatedMinutes = Math.max(1, Math.round((games.length * SECONDS_PER_GAME) / 60));
   const percentDone = progress.totalGames
@@ -72,8 +77,8 @@ export default function BlundersPage({ games, onBack, onOpenGame }) {
                     <th>Date</th>
                     <th>Move</th>
                     <th>Played</th>
-                    <th>Eval before</th>
-                    <th>Eval after</th>
+                    <th>Why</th>
+                    <th>Best was</th>
                     <th>Win chance lost</th>
                     <th>Time spent</th>
                   </tr>
@@ -82,13 +87,13 @@ export default function BlundersPage({ games, onBack, onOpenGame }) {
                   {blunders.map((blunder, index) => (
                     <tr
                       key={`${blunder.game.id}-${blunder.plyIndex}-${index}`}
-                      onClick={() => onOpenGame(blunder.game, blunder.plyIndex)}
+                      onClick={() => onOpenGame(blunder.game, blunder.plyIndex, blunder.explanation?.why)}
                     >
                       <td>{new Date(blunder.game.playedAt).toLocaleDateString()}</td>
                       <td>{blunder.moveNumber}</td>
                       <td>{blunder.movePlayed}</td>
-                      <td>{formatEval(blunder.evalBefore)}</td>
-                      <td>{formatEval(blunder.evalAfter)}</td>
+                      <td className="why-cell">{TAG_LABELS[blunder.explanation?.tag] ?? "—"}</td>
+                      <td>{blunder.explanation?.bestMoveSan ?? "—"}</td>
                       <td className="lost-cell">−{Math.round(blunder.lostWinPercent)}%</td>
                       <td>
                         {blunder.clockSeconds === null ? "—" : `${Math.round(blunder.clockSeconds)}s`}

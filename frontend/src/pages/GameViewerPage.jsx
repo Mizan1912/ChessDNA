@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Chessboard } from "react-chessboard";
 import { pgnToMoves, STARTING_FEN } from "../lib/pgnToMoves";
 import { pgnToClockMoves } from "../lib/clockData";
@@ -14,7 +14,7 @@ function formatSeconds(seconds) {
 // animated when this viewer opens — e.g. the slow move itself, not the game
 // as a whole. -1 means "no target, just open at the start" (the normal case,
 // clicking a game from the list).
-export default function GameViewerPage({ game, onBack, initialMoveIndex = -1 }) {
+export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, note = null }) {
   const moves = useMemo(() => pgnToMoves(game.pgn), [game.pgn]);
 
   // clockData.js always returns one entry per ply, same order as pgnToMoves,
@@ -45,6 +45,14 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1 }) 
   }, []); // only on mount — this is a one-time "arrive here" animation, not a live sync
 
   const currentFen = moveIndex === -1 ? STARTING_FEN : moves[moveIndex].fenAfter;
+
+  // Keep the highlighted move visible. Matters most when arriving from a
+  // finding: the move in question is often 30+ moves in, well outside the
+  // move list's visible window.
+  const activeMoveRef = useRef(null);
+  useEffect(() => {
+    activeMoveRef.current?.scrollIntoView({ block: "nearest" });
+  }, [moveIndex]);
 
   function goToStart() {
     setMoveIndex(-1);
@@ -77,6 +85,8 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1 }) 
         </a>
       </p>
 
+      {note && <p className="viewer-note">{note}</p>}
+
       <div className="viewer-layout">
         <div className="board-panel">
           <Chessboard options={{ position: currentFen, boardOrientation, allowDragging: false }} />
@@ -105,6 +115,7 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1 }) 
               return (
                 <li key={index}>
                   <button
+                    ref={index === moveIndex ? activeMoveRef : null}
                     className={index === moveIndex ? "active" : ""}
                     onClick={() => setMoveIndex(index)}
                   >

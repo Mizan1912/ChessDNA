@@ -2,6 +2,7 @@ import { Engine } from "./engine.js";
 import { pgnToMoves } from "./pgnToMoves.js";
 import { pgnToClockMoves } from "./clockData.js";
 import { winPercentLost } from "./winPercent.js";
+import { explainBlunder, uciToSan } from "./explainBlunder.js";
 
 // See decision.md D-031 (where these get tuned) and D-032 (why the main
 // threshold is win-percentage rather than the spec's raw centipawns).
@@ -42,25 +43,42 @@ async function scanOneGame(engine, game) {
     // useful about the player's judgement, so don't count it.
     if (Math.abs(evalBefore) > DECIDED_POSITION_CP) continue;
 
+    // You cannot blunder by playing the engine's own first choice. This
+    // guard matters because of how the two evaluations are taken: scoring
+    // the position AFTER a move searches one ply deeper than the position
+    // before it did, so even a perfect move can show a small apparent
+    // "drop". Without this, the best move in the position sometimes gets
+    // reported as a mistake, which is nonsense on its face.
+    if (uciToSan(move.fenBefore, before.bestMove) === move.san) continue;
+
     const after = await engine.evaluate(move.fenAfter, SCAN_DEPTH);
     const evalAfter = fromPlayerPerspective(after.scoreCp, game.userColor);
 
     const lostWinPercent = winPercentLost(evalBefore, evalAfter);
     if (lostWinPercent < BLUNDER_THRESHOLD_WIN_PERCENT) continue;
 
-    blunders.push({
+    const blunder = {
       game,
       plyIndex,
       moveNumber: move.moveNumber,
       fenBefore: move.fenBefore,
+      fenAfter: move.fenAfter,
       movePlayed: move.san,
-      engineBestMove: before.bestMove, // UCI format (e.g. "g1f3"), tagged into something readable in Phase 5
+      // Both in UCI format (e.g. "g1f3"); explainBlunder.js turns them into
+      // readable notation and works out WHY the move was bad.
+      engineBestMove: before.bestMove, // what the player should have played
+      refutationMove: after.bestMove, // how the opponent punishes what they did play
       evalBefore,
       evalAfter,
       lostWinPercent,
       lostCentipawns: evalBefore - evalAfter, // kept for display; not what the threshold uses
       clockSeconds: clockMoves[plyIndex]?.timeSpentSeconds ?? null,
-    });
+    };
+
+    // Worked out once here rather than on every render — it's the same
+    // answer every time, and the viewer wants it too.
+    blunder.explanation = explainBlunder(blunder);
+    blunders.push(blunder);
   }
 
   return blunders;

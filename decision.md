@@ -6,6 +6,43 @@ here.
 
 ---
 
+## D-033 — Blunders explain themselves; scan results survive navigation
+Date: 2026-09-20
+Phase: 4
+Decided by: user
+
+What: Three changes, all from user feedback that the blunder list said *that* a move was bad but
+never *why*, and that results vanished on navigation:
+1. **Scan state moved up to `App.jsx`.** It used to live inside `BlundersPage`, which unmounts the
+   moment you click a blunder to look at it — so coming back meant re-running a multi-minute scan.
+   Straightforward bug.
+2. **New `lib/explainBlunder.js`.** Turns a flagged move into a plain sentence: "Qd4 loses your
+   queen on d4 to Bxd4", "Nf6 allows a forced mate", "You had a forced mate here". It works off
+   board logic (chess.js) plus two engine moves the scan already computed but was throwing away —
+   the best move, and the opponent's refutation. Shown as a short tag in the table and as a full
+   sentence above the board when you open the position. No AI, no extra engine cost.
+3. **Move list scrolls the highlighted move into view** — findings are often 30+ moves deep, well
+   outside the visible window.
+Two correctness fixes came out of testing this on real games:
+- **Never flag the engine's own best move as a blunder.** Real output contained "move 44 d2 | best
+  was d2" — self-contradictory. Cause: scoring the position *after* a move searches one ply deeper
+  than the position before it did, so even a perfect move can show a small apparent drop. Now
+  skipped outright.
+- **Ignore hanging pawns when explaining.** "Nd6 leaves your pawn on f4 undefended" is technically
+  true and practically useless; explanations now only name a knight or better.
+Why: user asked for Chess.com-style reasons. Also follows the build doc's Feature 7 note that "the
+suggestions are free — the motif tags are already computed... turn each into a template sentence".
+Deliberately conservative: it only makes a specific claim when it's actually been checked on the
+board, and otherwise falls back to a vaguer sentence that's certainly true. Same reasoning the doc
+gives for keeping "Brilliant" strict — a confidently wrong explanation costs more trust than a
+cautious one.
+Alternatives considered: calling an LLM to write explanations (rejected — costs money, the doc
+forbids paid services, and it would invent things that aren't on the board).
+Affects: `lib/explainBlunder.js` (new), `lib/blunderScan.js`, `pages/BlundersPage.jsx`, `App.jsx`,
+`pages/GameViewerPage.jsx`/`.css`, `hooks/useBlunderScan.js` (now owned by App).
+
+---
+
 ## D-032 — Blunders are measured in win percentage, not centipawns (pulled forward from Phase 4B)
 Date: 2026-09-20
 Phase: 4

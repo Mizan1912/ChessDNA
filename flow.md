@@ -44,9 +44,12 @@ researched.
    a "Scan N games" button and a rough time estimate. During the scan it shows a progress bar
    ("analysing game 7 of 50 — 12 blunders so far") and the tab stays fully usable, because the
    engine runs in a Web Worker rather than on the main thread. When it finishes: a table of every
-   moment you threw the game away — move number, what you played, the evaluation before and after,
-   how much win chance it cost, and how long you spent on it. Clicking any row opens that exact
-   move on the board.
+   moment you threw the game away — move number, what you played, **why it was bad** ("Loses
+   material", "Allows mate", "Hangs a piece"), what the engine wanted instead, how much win chance
+   it cost, and how long you spent on it. Clicking any row opens that exact move on the board with
+   the full reason written out above it ("Qd4 loses your queen on d4 to Bxd4. The engine wanted
+   Nf3."), and the move list scrolls itself to that move. Results stay put while you click through
+   them — looking at one and coming back doesn't throw the scan away.
 
 The header nav (Games list / Tilt findings / Clock / Blunders) shows buttons for whichever views
 you're *not* currently on. No routing library is in use yet — the app is four screens toggled by local state in
@@ -134,6 +137,7 @@ Phase 4.
 | `/frontend/src/lib/engine.js` | Drives Stockfish in a Web Worker over the UCI text protocol; normalises every score to White's perspective. |
 | `/frontend/src/lib/blunderScan.js` | Walks each game's moves, evaluates before/after, and decides what counts as a blunder. |
 | `/frontend/src/lib/winPercent.js` | Converts centipawns to win percentage (Lichess's formula) — the measure blunders are actually judged by. |
+| `/frontend/src/lib/explainBlunder.js` | Works out *why* a move was bad (lost a piece / allowed mate / hung something) and writes it as a sentence. |
 | `/frontend/scripts/copy-stockfish.js` | Postinstall step: copies the engine's `.js`/`.wasm` out of node_modules into `public/stockfish/`. |
 | `/frontend/src/lib/backendApi.js` | All calls to `/server` (sign-in, sign-out, `/api/me`, saving the Chess.com username). |
 | `/server` | Standalone Express backend (see D-027 — chosen over Vercel functions so it can be hosted independently). Its own `package.json`, run with `npm run dev` inside `/server`. |

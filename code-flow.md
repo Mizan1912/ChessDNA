@@ -289,8 +289,42 @@ This is the first part of the app that needs a real chess engine rather than pla
    the 3 it dropped were all "was winning by 5 pawns, still winning by 3."
 6. **The UI never starts this by itself** (`useBlunderScan.js`, `BlundersPage.jsx`). A scan costs
    minutes, so it's always a button press. The hook tracks progress (reported after each game) so
-   the page can show a real progress bar, and sets a cancelled flag if you navigate away, so the
-   engine doesn't keep grinding invisibly in the background.
+   the page can show a real progress bar. Note where the hook actually lives: `App.jsx`, not
+   `BlundersPage`. That's deliberate — clicking a blunder to look at it unmounts the page, and if
+   the results lived there they'd be destroyed, forcing a fresh multi-minute scan just for daring
+   to look at one.
+7. **Two filters exist purely to stop it saying stupid things.** If the move played was the
+   engine's own top choice, it's skipped entirely — you can't blunder by playing the best move, and
+   without this guard it sometimes claimed you did (because scoring the position after a move
+   searches one ply deeper than the position before it, so even a perfect move shows a tiny
+   apparent "drop"). And hanging *pawns* are ignored when explaining, because "this leaves your
+   pawn undefended" is true of half of all chess positions and explains nothing.
+
+## 4f. Explaining WHY a move was a blunder
+
+**Files involved:** `lib/explainBlunder.js`
+
+An evaluation number tells you a move was bad but not what you did wrong. This turns the raw
+numbers into a sentence, using only board logic and two moves the scan already had lying around:
+the engine's preferred move, and the opponent's best reply (the "refutation"). No AI is involved —
+it would cost money, which the build doc forbids, and it would happily invent things that aren't on
+the board.
+
+It checks, in order of how much the answer matters, and stops at the first one that fits:
+
+1. Was there a forced mate available that you missed? → "You had a forced mate here."
+2. Does the move allow a forced mate against you? → "Nf6 allows a forced mate."
+3. Does the opponent's best reply simply capture something? → "Qd4 loses your queen on d4 to Bxd4."
+4. Is one of your pieces now attacked and not properly defended? (chess.js's `attackers()` finds
+   both the attackers and defenders of a square, and it counts as hanging if nothing defends it, or
+   if the cheapest attacker is worth less than the piece.) → "leaves your knight on f6 undefended."
+5. Nothing concrete found → say only what's certainly true: the engine disagreed, here's what it
+   wanted, here's how the opponent answers.
+
+That last fallback is the important one. The rule throughout is to never make a specific claim
+without checking it on the board first — a confidently wrong "this hangs your knight" destroys
+trust in everything else the app says, which is exactly the reasoning the build doc gives for
+keeping the "Brilliant" label strict.
 
 ## 5. Showing evidence for a finding
 
