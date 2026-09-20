@@ -377,7 +377,8 @@ Three things, none of which touch the quality of the analysis:
 1. **It only ever runs once per game.** A finished review is saved in the browser's own database
    (IndexedDB) under that game's id. Reopening the game loads the saved copy — about a second,
    versus half a minute to redo it. Saved reviews carry a stamp naming the settings they were
-   produced with (`d14-mpv2-v1`); if those settings ever change, old records are ignored and
+   produced with (`d14-mpv2-v2` — the `v2` because the stricter labels and the new accuracy curve
+   changed what a review says); if those settings ever change, old records are ignored and
    re-analysed rather than being shown as though they were still current. Every storage call is
    wrapped in a try/catch, because private browsing and full disks are real and neither should
    break the page — they just mean "no cache".
@@ -392,6 +393,73 @@ One other thing that mattered: the evaluation bar runs its own engine, and while
 running that meant *two* Stockfish workers fighting over the CPU. The bar now stands down during a
 review (except when you're exploring your own line, which the review knows nothing about). That
 single change took a first review from about 44 seconds to about 26.
+
+## 4i. The scorecard and the two clocks
+
+**Files involved:** `components/ReviewSummary.jsx`, `components/PlayerStrip.jsx`,
+`lib/clockData.js`
+
+Two pieces of the Chess.com layout that people already know how to read, so there's nothing new to
+learn.
+
+**The scorecard** sits beside the move list: both players in two columns (yours on the left, always
+— this screen is about you), their accuracy, a count of how many moves of each quality each of them
+played, and the per-game rating estimate. The row order comes straight from the label list itself,
+so adding a new label later puts it in the right place automatically without anyone remembering to
+update the panel. The counts fill in live while the review runs, because a tally of what's known so
+far is honest. Accuracy and the rating stay blank until the end, because an average over half a
+game isn't.
+
+**The clocks** are one strip above the board and one below — opponent on top, you underneath, as on
+a real board — and they flip when you flip the board. Working out what a clock read at a given
+move is simpler than it sounds: chess.com's PGN writes each player's remaining time after every
+move, so a player's clock at move 20 is just whatever it read the last time they moved. The code
+walks backwards from where you are until it finds that player's most recent move. Before anyone has
+moved, both show the starting time from the PGN's time-control header. Whoever is about to move
+gets the lit clock, and under ten seconds it shows tenths and turns red — which is exactly when
+tenths start to matter.
+
+## 4j. Being as strict as Chess.com
+
+**Files involved:** `lib/moveLabels.js`, `lib/openingBook.js`, `lib/reviewGame.js`
+
+Side by side with a real Chess.com review of the same kind of game, our version was too generous:
+Chess.com gave 0 Brilliant and 2 Great, we gave 1 Brilliant and a handful of Greats, and our
+accuracy figures sat in the 90s where theirs sat in the 70s and 80s. A compliment that arrives
+every third move isn't a compliment. Three changes fixed it.
+
+**"Great" now has to pass three tests instead of one.** The old rule was simply "you found the
+engine's move and the runner-up was 10 points worse". Now: the gap has to be 15 points, *and* the
+runner-up has to have actually cost you something that matters, *and* there has to have been a real
+choice in the first place.
+
+That middle test is the interesting one. Imagine you're winning overwhelmingly. The best move keeps
+you winning overwhelmingly; the second-best keeps you winning comfortably. On paper that's a big
+gap. Over the board it's no difference at all — you were winning either way. So positions are
+sorted into three states (losing, a game, winning), and a move only counts as "the only move" if
+every alternative would have dropped you into a worse state. Finding the one move that saves a lost
+position is great. Finding the flashiest way to stay three queens up is not.
+
+**"Brilliant" keeps all of that and adds that you weren't already winning easily.** Giving up a
+knight when you're a rook ahead isn't brilliant, it's just still winning. Together with the
+existing requirement — a real sacrifice that you don't win straight back, leaving a position that
+still holds — this now almost never fires, which is the point.
+
+**"Book" exists now.** `openingBook.js` holds 79 mainstream opening lines written out as moves. A
+move is Book while the whole game so far still matches the start of one of them. Chess.com does
+this from a database of millions of master games and we can't ship that, so ours is small on
+purpose and errs one way only: a real theory move it doesn't know gets called Best instead of Book,
+which is merely less informative. It will never claim something is theory when it isn't. Book moves
+are also left out of the accuracy calculation entirely — memorising ten moves shouldn't pad your
+score, and theory isn't your work to be credited for.
+
+**Accuracy got a proper curve.** It used to be a straight line: average how much you threw away,
+multiply, subtract. That treats a 40-point collapse as exactly twice as bad as a 20-point one,
+which isn't how chess works — and it let forty quiet moves drown out the two that decided the game.
+Now each move gets its own accuracy from a curve that's steep near the top and flat at the bottom,
+and the game's figure blends the ordinary average with a harmonic mean, which is the kind of
+average that gets dragged down hard by your worst moments. That's why one real blunder now costs
+you visibly, where before it vanished into the crowd.
 
 ## 5. Showing evidence for a finding
 
@@ -420,4 +488,5 @@ Pick the feature, then read the files in this order — each one calls into the 
 - **Blunders:** `engine.js` → `blunderScan.js` (+ `winPercent.js`) → `useBlunderScan.js` →
   `BlundersPage.jsx`
 - **Evaluation bar:** `useLiveEval.js` → `engine.js`, rendered by `EvalBar.jsx`
-- **Move labels:** `reviewGame.js` → `moveLabels.js` → `useGameReview.js` → `GameViewerPage.jsx`
+- **Move labels:** `reviewGame.js` → `moveLabels.js` (+ `openingBook.js`) → `useGameReview.js` →
+  `GameViewerPage.jsx` → `ReviewSummary.jsx`

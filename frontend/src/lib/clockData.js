@@ -17,6 +17,10 @@ function parseClockSeconds(comment) {
 
 // TimeControl header looks like "180+2" (180s base, 2s increment), "180"
 // (no increment), or "1/86400" (daily — no fixed base, handled as null).
+export function pgnTimeControl(pgn) {
+  return parseTimeControl(pgn);
+}
+
 function parseTimeControl(pgn) {
   const match = pgn.match(/\[TimeControl "(\d+)(?:\+(\d+))?"\]/);
   if (!match) return { baseSeconds: null, incrementSeconds: 0 };
@@ -60,6 +64,9 @@ export function pgnToClockMoves(pgn) {
       san: move.san,
       fenBefore: move.before,
       timeSpentSeconds,
+      // What this player's clock actually read after making the move — what
+      // the two clocks beside the board show as you step through the game.
+      clockRemainingSeconds: clockNow,
       isOpening: Math.floor(i / 2) + 1 <= OPENING_MOVE_CUTOFF,
     };
   });

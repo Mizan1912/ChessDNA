@@ -10,7 +10,10 @@
 //   playedAt: number        - unix timestamp (ms) the game ended
 //   timeClass: string       - "bullet" | "blitz" | "rapid" | "daily" etc
 //   userColor: "white" | "black"
+//   userName: string        - the player's own username on that site
+//   userRating: number|null - their rating in this game's time class
 //   opponentName: string
+//   opponentRating: number|null
 //   result: "win" | "loss" | "draw"
 //   resultReason: string   - the site's specific reason, e.g. "timeout", "resigned",
 //                            "checkmated", "agreed" — used by the tilt detector to
@@ -49,7 +52,10 @@ export function normalizeChessComGame(rawGame, username) {
     playedAt: rawGame.end_time * 1000,
     timeClass: rawGame.time_class,
     userColor: userIsWhite ? "white" : "black",
+    userName: userSide.username,
+    userRating: userSide.rating ?? null,
     opponentName: opponentSide.username,
+    opponentRating: opponentSide.rating ?? null,
     result: toWinLossDraw(userSide.result),
     resultReason: userSide.result,
     pgn: rawGame.pgn,

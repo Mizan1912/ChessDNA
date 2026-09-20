@@ -148,7 +148,10 @@ Phase 4.
 | `/frontend/src/lib/blunderScan.js` | Walks each game's moves, evaluates before/after, and decides what counts as a blunder. |
 | `/frontend/src/lib/winPercent.js` | Converts centipawns to win percentage (Lichess's formula) — the measure blunders are actually judged by. |
 | `/frontend/src/lib/explainBlunder.js` | Works out *why* a move was bad (lost a piece / allowed mate / hung something) and writes it as a sentence. |
-| `/frontend/src/lib/moveLabels.js` | The Brilliant/Great/Best/…/Blunder classification rules, and each label's glyph and colour. |
+| `/frontend/src/lib/moveLabels.js` | The Brilliant/Great/Book/Best/…/Blunder classification rules, and each label's glyph and colour. |
+| `/frontend/src/lib/openingBook.js` | 79 mainstream opening lines — what makes a move "Book". Deliberately small, so it under-fires rather than lying (D-041). |
+| `/frontend/src/components/ReviewSummary.jsx` + `.css` | The review scorecard: both players' accuracy, a count of every label each played, and the per-game rating estimate. |
+| `/frontend/src/components/PlayerStrip.jsx` + `.css` | One player's row above or below the board — name, rating, and their clock at the move you're looking at. |
 | `/frontend/src/lib/reviewGame.js` | Phase 4B's deep review: evaluates every position of one game, labels every move, scores accuracy. |
 | `/frontend/src/hooks/useGameReview.js` | Runs that review for the open game — auto-starts, reads/writes the cache, reports partial results. |
 | `/frontend/src/lib/reviewCache.js` | Saves finished reviews in the browser (IndexedDB) so a game is only ever analysed once. |
@@ -190,7 +193,14 @@ Phase 4.
       evaluation bar, and a playable analysis board. Runs at depth 14/MultiPV 2 rather than the
       doc's 18/3 — measured near-identical output for a fraction of the time, see D-034. Reviews
       auto-start, stream in as computed, and are cached in the browser (26s first time, ~1s after).
-      No "Book" label — we have no opening file, see D-034.
+- [x] Phase 4B — Matched against Chess.com, on the user's comparison: Great and Brilliant are now
+      much harder to earn (D-039), accuracy uses the Lichess curve blended with a harmonic mean
+      instead of a too-generous straight line (D-040), and there is a small hand-written opening
+      book so early moves read as "Book" (D-041). Reversing D-034's "no Book label".
+- [x] Phase 4B — Review scorecard (D-043): both players' accuracy, every label counted for each
+      side, and the per-game rating estimate — the Chess.com sidebar, same shape.
+- [x] Phase 4B — Both players' clocks beside the board, opponent above and you below, updating as
+      you step through the game (D-042).
 - [ ] Phase 5 — Tagging and baseline
 - [ ] Phase 6 — Repetition queue
 - [ ] Phase 7 — Opening fit

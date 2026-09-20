@@ -2,6 +2,7 @@ import { Chess } from "chess.js";
 import { Engine } from "./engine.js";
 import { pgnToMoves } from "./pgnToMoves.js";
 import { classifyMove } from "./moveLabels.js";
+import { isBookMove, BOOK_MAX_PLIES } from "./openingBook.js";
 import { centipawnsToWinPercent } from "./winPercent.js";
 import { uciToSan } from "./explainBlunder.js";
 
@@ -24,14 +25,37 @@ function toMoverPerspective(scoreCp, colorLetter) {
   return colorLetter === "b" ? -scoreCp : scoreCp;
 }
 
-// Turns the per-move win-percentage losses into a single 0-100 accuracy
-// figure, the way review screens usually present it. A player who never
-// loses anything scores 100; the more they throw away on average, the lower
-// it goes.
+const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+
+// How accurate a SINGLE move was, 0-100, from how much win percentage it
+// threw away. This is Lichess's published curve, which Chess.com's numbers
+// track closely: it is steep near the top (a 5-point slip already costs you
+// real accuracy) and flattens out at the bottom (a catastrophe is a
+// catastrophe, twice as bad barely registers).
+//
+// The first version here was a flat `100 - averageLoss * 2.5`, which was far
+// too generous — it handed out 95% for games Chess.com scores in the 70s.
+// See decision.md D-040.
+function moveAccuracy(winPercentLost) {
+  return clamp(103.1668 * Math.exp(-0.04354 * winPercentLost) - 3.1669, 0, 100);
+}
+
+// Turns the per-move losses into one 0-100 figure for the game.
+//
+// The plain average alone is too forgiving: forty quiet moves drown out the
+// two that decided the game. So the harmonic mean is blended in, which is
+// dragged down hard by the worst moves — the same trick Lichess uses, and the
+// reason a game with four mistakes lands in the 70s rather than the 90s.
 function accuracyFromLosses(losses) {
   if (losses.length === 0) return null;
-  const averageLoss = losses.reduce((sum, value) => sum + value, 0) / losses.length;
-  return Math.max(0, Math.min(100, Math.round(100 - averageLoss * 2.5)));
+  // Floored at 1 so a single total collapse can't send the harmonic mean to
+  // zero and take the whole game with it.
+  const perMove = losses.map((lost) => Math.max(1, moveAccuracy(lost)));
+  const arithmetic = perMove.reduce((sum, value) => sum + value, 0) / perMove.length;
+  const harmonic = perMove.length / perMove.reduce((sum, value) => sum + 1 / value, 0);
+  // One decimal place, like every other review screen — 75.6 reads as a
+  // measurement, 76 reads as a grade.
+  return Math.round(clamp((arithmetic + harmonic) / 2, 0, 100) * 10) / 10;
 }
 
 // A rough rating-strength estimate for how someone played in THIS game.
@@ -43,9 +67,22 @@ function accuracyFromLosses(losses) {
 // tested you. A quiet drawn game can be 95% accurate for a beginner. This is
 // therefore labelled in the UI as a per-game performance estimate, never as
 // "your rating". Added on explicit request — see decision.md D-037.
+//
+// Anchored on a real Chess.com review: 75.6% accuracy -> 1200, 85.0% -> 1400.
+//
+// A straight line through those two points was the first attempt and it was
+// wrong at the top — it capped a flawless 100% game at about 1720, which
+// nobody would believe. The relationship is not linear: the last few points
+// of accuracy are enormously harder to earn than the first few. So this is an
+// exponential fit through the lower anchor and the rule of thumb that a 95%
+// game is roughly 2000-strength, which reaches ~2280 at a perfect 100%.
+//
+// Be clear about what that means: one anchor is measured, the other is
+// judgement. Chess.com also weighs how strong the opponent was, which this
+// doesn't see at all. See decision.md D-040.
 export function ratingFromAccuracy(accuracy) {
   if (accuracy === null) return null;
-  return Math.round(Math.max(400, Math.min(2900, (accuracy - 52) * 52)));
+  return Math.round(clamp(164 * Math.exp(0.0263 * accuracy), 100, 3000));
 }
 
 /**
@@ -64,6 +101,11 @@ export async function reviewGame(game, { onProgress, isCancelled } = {}) {
   const evalAfterPly = []; // White's perspective, indexed by ply
   const lossesByColor = { w: [], b: [] };
   let startingEval = 0;
+
+  // Book detection walks forward with the game: once the game leaves theory
+  // it can never re-enter it, so this latches off and stays off.
+  const sanSoFar = [];
+  let stillInBook = true;
 
   try {
     await engine.start();
@@ -97,6 +139,13 @@ export async function reviewGame(game, { onProgress, isCancelled } = {}) {
       const replySan = after.lines[0]?.move ?? after.bestMove;
       const fenAfterReply = applyUciMove(move.fenAfter, replySan);
 
+      sanSoFar.push(move.san);
+      if (stillInBook && plyIndex < BOOK_MAX_PLIES) {
+        stillInBook = isBookMove(sanSoFar);
+      } else {
+        stillInBook = false;
+      }
+
       const label = classifyMove({
         evalBefore,
         evalAfter,
@@ -105,13 +154,17 @@ export async function reviewGame(game, { onProgress, isCancelled } = {}) {
         fenBefore: move.fenBefore,
         fenAfterReply,
         playerColorLetter: move.color,
+        isBook: stillInBook,
+        legalMoveCount: new Chess(move.fenBefore).moves().length,
       });
 
       const lost = Math.max(
         0,
         centipawnsToWinPercent(evalBefore) - centipawnsToWinPercent(evalAfter)
       );
-      lossesByColor[move.color].push(lost);
+      // Theory doesn't count towards accuracy in either direction — playing
+      // ten memorised book moves shouldn't pad the score.
+      if (!stillInBook) lossesByColor[move.color].push(lost);
 
       reviewed.push({
         plyIndex,

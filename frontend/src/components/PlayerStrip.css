@@ -1,0 +1,58 @@
+.player-strip {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.1rem;
+  font-size: 0.9rem;
+  min-width: 0;
+}
+
+.player-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.player-rating {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.player-you {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--color-accent);
+}
+
+/* The clock sits hard against the right edge, the way every chess site puts
+   it — so your eye always finds it in the same place. */
+.player-clock {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-size: 1rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Whoever is about to move gets the lit clock, as on a real board. */
+.player-strip.to-move .player-clock {
+  background: var(--color-text);
+  border-color: var(--color-text);
+  color: var(--color-bg);
+}
+
+.player-clock.low {
+  color: #d15b55;
+}
+
+.player-strip.to-move .player-clock.low {
+  background: #d15b55;
+  border-color: #d15b55;
+  color: var(--color-bg);
+}

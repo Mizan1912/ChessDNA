@@ -1,0 +1,112 @@
+.review-summary {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  padding: 0.5rem 0.75rem 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.summary-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.summary-head h3 {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  font-weight: 600;
+}
+
+.summary-toggle {
+  background: transparent;
+  border: none;
+  padding: 0.15rem 0.3rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+}
+
+/* One grid shape for every row, so the two players' numbers line up in two
+   straight columns from top to bottom. */
+.summary-row {
+  display: grid;
+  grid-template-columns: 1fr 3.5rem 1.9rem 3.5rem;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.28rem 0;
+  font-size: 0.85rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.summary-metric {
+  color: var(--color-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.summary-value {
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+
+.summary-glyph {
+  text-align: center;
+  font-weight: 700;
+}
+
+/* The count rows take their colour from the label class (.label-blunder and
+   friends, defined with the move list) — the number and its symbol are both
+   tinted, so the row reads as one thing. */
+.summary-count .summary-value {
+  font-weight: 600;
+  color: inherit;
+}
+
+/* Usernames need room that a 3.5rem number column doesn't have, so this one
+   row borrows width back from the label column. */
+.summary-players {
+  grid-template-columns: 4.2rem 1fr 0.6rem 1fr;
+}
+
+.summary-player {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+.summary-player-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.8rem;
+}
+
+.accuracy-chip,
+.rating-chip {
+  display: inline-block;
+  min-width: 100%;
+  box-sizing: border-box;
+  padding: 0.2rem 0.3rem;
+  border-radius: var(--radius-md);
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+}
+
+.accuracy-chip {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.summary-rating .summary-metric {
+  cursor: help;
+}

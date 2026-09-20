@@ -6,6 +6,155 @@ here.
 
 ---
 
+## D-043 — The game-review scorecard, and why every cached review was thrown away
+Date: 2026-09-21
+Phase: 4B
+Decided by: user
+
+What: `components/ReviewSummary.jsx` — the review sidebar in the shape people already know how to
+read: both players side by side, their accuracy, a count of every label each of them played, and
+the per-game strength estimate. Your column is always on the left, because this screen is about
+you. Label rows are ordered best-to-worst straight from `LABELS`'s own key order, so adding a label
+to that map puts it in the right row automatically.
+
+The counts fill in live as the review runs, since they're just a tally of what's known. Accuracy
+and the rating estimate stay blank (`—`) until the review is finished, for the same reason the
+inline line already did: a half-game average is misleading, not merely incomplete.
+
+The panel replaces the old inline rating line, which said "≈2236 level this game"; the number now
+lives in the scorecard's "Game rating" row with the same hover caveat attached.
+
+Because D-039, D-040 and D-041 all change what a review *says* about the same game, the cache
+format stamp went from `d14-mpv2-v1` to `-v2`. Every review saved under the old rules is discarded
+and re-analysed rather than being mixed in with numbers that now mean something different. This is
+exactly the situation the stamp was built for in D-038.
+
+Affects: `components/ReviewSummary.jsx` + `.css` (new), `lib/reviewCache.js`,
+`pages/GameViewerPage.jsx`.
+
+---
+
+## D-042 — Both clocks sit beside the board, one player per side
+Date: 2026-09-21
+Phase: 4B
+Decided by: user
+
+What: The game viewer now puts a player strip above the board and another below it — name, rating,
+a colour dot, and that player's clock at whatever move you're looking at. Opponent on top, you
+underneath, exactly the arrangement of a real board and of every chess site. Both strips flip with
+the board, so the side facing you is always at the bottom.
+
+How the clock number is worked out: a player's clock at ply N is whatever it read after their most
+recent move, so the code walks back from N to the last ply that player made. Before either side has
+moved, both show the starting time from the PGN's `TimeControl` header. `lib/clockData.js` already
+parsed every `[%clk ...]` comment to compute time *spent*; it now also passes through the raw time
+*remaining*, which is the same data read the other way.
+
+Whoever is to move gets the lit clock (inverted colours), as on a real board, read straight off the
+side-to-move field of the current FEN. Under ten seconds the clock switches to tenths and turns
+red, because that is exactly when tenths start to matter.
+
+Affects: `components/PlayerStrip.jsx` + `.css` (new), `lib/clockData.js`, `lib/normalizeGame.js`
+(now carries `userName`, `userRating`, `opponentRating`), `pages/GameViewerPage.jsx` + `.css`.
+
+---
+
+## D-041 — A small hand-written opening book, which under-fires on purpose
+Date: 2026-09-21
+Phase: 4B
+Decided by: assistant, to serve the user's "match Chess.com" request
+
+What: `lib/openingBook.js` holds 79 mainstream opening lines in SAN. A move is labelled **Book**
+while the whole game so far is still a prefix of at least one of them. Book moves are labelled
+before anything else is considered, and are excluded from accuracy in both directions — playing ten
+memorised moves shouldn't pad your score, and neither should theory be credited to you.
+
+Why hand-written: Chess.com decides this from a database of millions of master games. We can't ship
+that. The consequence is deliberate and one-directional — **this book under-fires**. A genuine
+theory move that isn't in the list gets labelled Best or Excellent instead of Book, which is merely
+less informative. It never claims a move is theory when it isn't. Measured on a real game, we
+labelled 1 book move per side where Chess.com labelled 2.
+
+Every line was machine-checked for legality with chess.js (79 lines, 0 illegal) rather than trusted
+as typed.
+
+Affects: `lib/openingBook.js` (new), `lib/moveLabels.js`, `lib/reviewGame.js`.
+
+---
+
+## D-040 — Accuracy uses the Lichess curve blended with a harmonic mean
+Date: 2026-09-21
+Phase: 4B
+Decided by: user ("chess.com k game review zyada strict h... match kro")
+
+What: Accuracy was `100 - averageLoss * 2.5`, a straight line. It was far too generous — it handed
+out 95% for games Chess.com scores in the 70s and 80s. Replaced with two changes:
+
+1. **Per-move accuracy** now uses Lichess's published curve,
+   `103.1668 * exp(-0.04354 * winPercentLost) - 3.1669`. It is steep near the top (a five-point
+   slip already costs real accuracy) and flat at the bottom (a catastrophe is a catastrophe;
+   twice as bad barely registers). This matches how the labels already think.
+2. **The game figure blends the arithmetic and harmonic means** of those per-move numbers. The
+   plain average alone lets forty quiet moves drown out the two that decided the game; the harmonic
+   mean is dragged down hard by the worst moves. Per-move values are floored at 1 so a single total
+   collapse can't send the harmonic mean to zero and take the game with it.
+
+Reported to one decimal place, like every other review screen — 75.6 reads as a measurement, 76
+reads as a grade.
+
+Also recalibrated the per-game rating estimate from D-037. It was `(accuracy - 52) * 52`, tuned
+against the old inflated accuracies. Refitted against a real Chess.com review (75.6% -> 1200,
+85.0% -> 1400). A straight line through those two points was tried first and was wrong at the top:
+it capped a flawless 100% game at about 1720, which nobody would believe. The relationship isn't
+linear — the last few points of accuracy are enormously harder to earn than the first few — so it's
+now `164 * exp(0.0263 * accuracy)`, which passes through the lower anchor and the rule of thumb
+that a 95% game is roughly 2000-strength, reaching ~2280 at a perfect 100%.
+
+**Be clear what that is:** one anchor is measured, the other is judgement, and Chess.com also
+weighs how strong the opponent was, which we don't see at all. The build doc's warning from D-037
+still stands. Measured after the change, a 3400-rated player's 90%-accuracy bullet game reads as
+~1763, which is plainly too low for that player — the estimate under-reads badly at the top and
+should be recalibrated once Phase 5's baseline data exists, or removed.
+
+Affects: `lib/reviewGame.js`.
+
+---
+
+## D-039 — Great and Brilliant are much harder to earn
+Date: 2026-09-21
+Phase: 4B
+Decided by: user ("no brill 2 great lekin tmhara review m 1 brill and many great h")
+
+What: The user compared a real Chess.com review against ours on the same kind of game. Chess.com
+gave 0 Brilliant and 2 Great; we gave 1 Brilliant and a fistful of Greats. A label that fires often
+stops meaning anything, and Chess.com is the reference people compare against — they pay for it,
+and we're giving this away, so it has to be at least as honest.
+
+The old rule for "Great" was one test: the player found the engine's move and the second-best was
+10+ win-percentage points worse. Three tests now have to pass at once:
+
+1. **The gap is 15 points, not 10.**
+2. **The alternative would have changed the state of the game.** A move is only "the only move" if
+   the others actually lose something that matters. Going from +8 to +4 is a huge win-percentage
+   gap on paper and no difference whatsoever over the board. States are win-percentage bands:
+   losing below 35, winning above 65, a game in between. The second-best move has to drop you into
+   a worse band than the best one.
+3. **There was a real choice.** A forced recapture is not a great move.
+
+**Brilliant** keeps all of the above and adds that you weren't already winning easily
+(`evalBefore < 400cp`) on top of the existing requirement of a real, unreturned sacrifice of a
+piece or more that leaves the position still playable. Sacrificing a knight when you're a rook up
+isn't brilliant, it's just still winning.
+
+Measured after the change on a real bullet game between two 3300+ players: **0 Brilliant for both
+sides, 2 Great for the user** — matching the Chess.com screenshot exactly on both counts. The
+opponent still got 5 Greats, which is more than Chess.com would likely award; if that stays
+annoying the honest next lever is raising the gap again rather than adding special cases.
+
+Affects: `lib/moveLabels.js`, `lib/reviewGame.js` (passes the legal-move count and book flag).
+
+---
+
 ## D-038 — Reviews are cached, auto-started, and shown as they're computed
 Date: 2026-09-20
 Phase: 4B

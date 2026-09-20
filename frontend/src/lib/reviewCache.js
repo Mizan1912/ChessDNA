@@ -12,7 +12,10 @@ const DB_VERSION = 1;
 // wrong — different engine depth, different labelling rules. Anything stored
 // under an older stamp is ignored and re-analysed rather than shown as if it
 // were current.
-export const REVIEW_FORMAT = "d14-mpv2-v1";
+// v2: stricter Great/Brilliant, opening book, Lichess-curve accuracy (D-039,
+// D-040, D-041). Everything saved under v1 was scored by the old, looser
+// rules, so it is discarded rather than mixed in with the new numbers.
+export const REVIEW_FORMAT = "d14-mpv2-v2";
 
 function openDb() {
   return new Promise((resolve, reject) => {

@@ -37,6 +37,13 @@
   flex-shrink: 0;
 }
 
+/* Opponent strip, board, your strip — a column, so the two clocks sit
+   directly above and below the board the way they do on a real one. */
+.board-stack {
+  display: flex;
+  flex-direction: column;
+}
+
 /* align-items: stretch is what makes the evaluation bar exactly as tall as
    the board next to it, at whatever size the board ends up. */
 .board-row {
@@ -143,6 +150,7 @@
 
 .label-brilliant { color: #35c4b5; }
 .label-great { color: #6a9ee8; }
+.label-book { color: #a1836b; }
 .label-best { color: #8bc34a; }
 .label-excellent { color: #7aa653; }
 .label-good { color: var(--color-text-muted); }

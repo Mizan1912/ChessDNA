@@ -1,5 +1,5 @@
 import { Chess } from "chess.js";
-import { winPercentLost } from "./winPercent.js";
+import { centipawnsToWinPercent, winPercentLost } from "./winPercent.js";
 
 // The move-quality labels, straight from the build doc's Feature 7 table.
 // Every threshold is a WIN PERCENTAGE loss, never a centipawn loss — the doc
@@ -10,6 +10,7 @@ import { winPercentLost } from "./winPercent.js";
 export const LABELS = {
   brilliant: { name: "Brilliant", glyph: "!!", className: "label-brilliant" },
   great: { name: "Great", glyph: "!", className: "label-great" },
+  book: { name: "Book", glyph: "◫", className: "label-book" },
   best: { name: "Best", glyph: "★", className: "label-best" },
   excellent: { name: "Excellent", glyph: "✓", className: "label-excellent" },
   good: { name: "Good", glyph: "·", className: "label-good" },
@@ -21,6 +22,39 @@ export const LABELS = {
 
 const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 0 };
 const MATE_THRESHOLD_CP = 90000;
+
+// --- How rare "Great" and "Brilliant" are ---------------------------------
+//
+// The first version of these rules handed out a Brilliant and a fistful of
+// Greats in a game where Chess.com gave zero and two. Chess.com is the
+// reference people compare against, and a label that fires often stops
+// meaning anything. See decision.md D-039 for the full reasoning.
+//
+// Three gates now have to be passed at once for "Great":
+//  1. the gap to the second-best move is large (this used to be 10),
+//  2. the alternative would have changed the STATE of the game — a move is
+//     only "the only move" if the others actually lose something that
+//     matters. Going from +8 to +4 is a big win-percentage gap on paper and
+//     no difference at all over the board.
+//  3. there was a real choice to make (not a forced recapture).
+const GREAT_GAP_WIN_PERCENT = 15;
+
+// Win-percentage bands used for gate 2 above: below 35 you are losing,
+// above 65 you are winning, in between it's a game.
+const WINNING_WIN_PERCENT = 65;
+const LOSING_WIN_PERCENT = 35;
+
+// Brilliant additionally requires that you weren't already completely
+// winning. Sacrificing a knight when you're a rook up is not brilliant, it's
+// just still winning.
+const BRILLIANT_MAX_LEAD_CP = 400;
+
+// Which of the three bands (0 losing, 1 balanced, 2 winning) a position is in.
+function band(winPercent) {
+  if (winPercent >= WINNING_WIN_PERCENT) return 2;
+  if (winPercent > LOSING_WIN_PERCENT) return 1;
+  return 0;
+}
 
 // How much material one side has on the board right now.
 function materialFor(fen, colorLetter) {
@@ -50,6 +84,8 @@ function materialSacrificed(fenBefore, fenAfterOpponentReply, playerColorLetter)
  *  - secondBestEval: what the engine's second-best move was worth (null if
  *    there wasn't one — e.g. only one legal move)
  *  - fenBefore / fenAfterReply / playerColorLetter: for detecting sacrifices
+ *  - isBook: the game is still inside known opening theory
+ *  - legalMoveCount: how many moves were available (1 means forced)
  */
 export function classifyMove(context) {
   const {
@@ -60,26 +96,41 @@ export function classifyMove(context) {
     fenBefore,
     fenAfterReply,
     playerColorLetter,
+    isBook = false,
+    legalMoveCount = 2,
   } = context;
 
   const lost = winPercentLost(evalBefore, evalAfter);
 
-  // "Great" per the doc: the best move was 10+ win-percentage points better
-  // than the second best, and the player found it. In other words, there was
-  // only one move that held the position together and they saw it.
+  // Theory isn't the player's work, good or bad, so it's labelled before
+  // anything else and never praised or blamed.
+  if (isBook) return "book";
+
+  // "The only move": the player found the engine's choice, the runner-up was
+  // far worse, that difference actually mattered, and there was a genuine
+  // choice to make. All four, or it's just a Best move.
+  const bestWinPercent = centipawnsToWinPercent(evalBefore);
+  const secondWinPercent =
+    secondBestEval === null ? null : centipawnsToWinPercent(secondBestEval);
+
   const wasOnlyGoodMove =
     playedBestMove &&
-    secondBestEval !== null &&
-    winPercentLost(evalBefore, secondBestEval) >= 10;
+    legalMoveCount > 1 &&
+    secondWinPercent !== null &&
+    bestWinPercent - secondWinPercent >= GREAT_GAP_WIN_PERCENT &&
+    band(secondWinPercent) < band(bestWinPercent);
 
   // Checked in the doc's own order, stopping at the first match.
 
-  // Brilliant = Great, plus a real material sacrifice, plus the position is
-  // still OK afterwards. Kept deliberately strict: the doc warns this is the
-  // label that embarrasses you, and that when unsure you downgrade to Great.
+  // Brilliant = the only move, plus a real material sacrifice, plus the
+  // position is still OK afterwards, plus you weren't already winning easily.
+  // Kept deliberately strict: the doc warns this is the label that
+  // embarrasses you, and that when unsure you downgrade to Great.
   if (wasOnlyGoodMove) {
     const sacrificed = materialSacrificed(fenBefore, fenAfterReply, playerColorLetter);
-    if (sacrificed >= 3 && evalAfter >= 0) return "brilliant";
+    if (sacrificed >= 3 && evalAfter >= 0 && evalBefore < BRILLIANT_MAX_LEAD_CP) {
+      return "brilliant";
+    }
     return "great";
   }
 

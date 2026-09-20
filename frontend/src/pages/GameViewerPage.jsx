@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { pgnToMoves, STARTING_FEN } from "../lib/pgnToMoves";
-import { pgnToClockMoves } from "../lib/clockData";
+import { pgnToClockMoves, pgnTimeControl } from "../lib/clockData";
 import { LABELS } from "../lib/moveLabels";
 import EvalBar from "../components/EvalBar";
+import PlayerStrip from "../components/PlayerStrip";
+import ReviewSummary from "../components/ReviewSummary";
 import { useLiveEval } from "../hooks/useLiveEval";
 import { useGameReview } from "../hooks/useGameReview";
 import "./GameViewerPage.css";
@@ -16,7 +18,10 @@ function formatSeconds(seconds) {
 
 const otherColour = (colour) => (colour === "black" ? "white" : "black");
 const accuracyFor = (colour, accuracy) => accuracy?.[colour] ?? "—";
-const ratingFor = (colour, estimatedRating) => estimatedRating?.[colour] ?? null;
+
+// "best was Nf3" is noise when you already played it, and for theory moves
+// there is nothing to improve on.
+const NO_BEST_MOVE_HINT = new Set(["best", "brilliant", "great", "book"]);
 
 // `initialMoveIndex` is the move a finding elsewhere in the app (the clock
 // page's "longest think" or "known position" findings) wants highlighted and
@@ -92,6 +97,47 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
 
   const currentLabel = !exploring && moveIndex >= 0 ? labelsByPly.get(moveIndex) : null;
 
+  // --- the two clocks beside the board ---
+  // A player's clock at this point in the game is whatever it read after
+  // their most recent move, so walk back from here to the last ply they
+  // played. Before either side has moved, both clocks show the starting time
+  // from the TimeControl header.
+  const baseSeconds = useMemo(() => pgnTimeControl(game.pgn).baseSeconds, [game.pgn]);
+  function clockFor(colourLetter) {
+    for (let i = Math.min(moveIndex, clockMoves.length - 1); i >= 0; i--) {
+      if (moves[i]?.color !== colourLetter) continue;
+      return clockMoves[i]?.clockRemainingSeconds ?? null;
+    }
+    return baseSeconds;
+  }
+
+  // Whose turn it is in the position on screen — drives which clock is lit.
+  const sideToMove = currentFen.split(" ")[1];
+
+  const sides = {
+    white: {
+      colour: "white",
+      isYou: game.userColor === "white",
+      name: game.userColor === "white" ? game.userName ?? "You" : game.opponentName,
+      rating: game.userColor === "white" ? game.userRating : game.opponentRating,
+      clockSeconds: clockFor("w"),
+      isToMove: sideToMove === "w",
+    },
+    black: {
+      colour: "black",
+      isYou: game.userColor === "black",
+      name: game.userColor === "black" ? game.userName ?? "You" : game.opponentName,
+      rating: game.userColor === "black" ? game.userRating : game.opponentRating,
+      clockSeconds: clockFor("b"),
+      isToMove: sideToMove === "b",
+    },
+  };
+
+  // Whoever's side of the board is facing you sits at the bottom, as on a
+  // real board — so flipping the board flips the two strips with it.
+  const bottomSide = sides[boardOrientation];
+  const topSide = sides[otherColour(boardOrientation)];
+
   // Keep the highlighted move visible. Matters most when arriving from a
   // finding: the move in question is often 30+ moves in, well outside the
   // move list's visible window.
@@ -147,25 +193,33 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
         <div className="board-column">
           {/* Bar and board sit in their own row so the bar can stretch to
               exactly the board's height, whatever size it renders at. */}
-          <div className="board-row">
-            <EvalBar scoreCp={shownScoreCp} boardOrientation={boardOrientation} />
-            <div className="board-panel">
-              <Chessboard
-                options={{
-                  position: currentFen,
-                  boardOrientation,
-                  allowDragging: true,
-                  onPieceDrop: handlePieceDrop,
-                }}
-              />
+          {/* Opponent on top, you underneath, each with their clock — the
+              arrangement of a real board, and of every chess site. The
+              evaluation bar stays level with the board itself rather than
+              with the strips. */}
+          <div className="board-stack">
+            <PlayerStrip {...topSide} />
+            <div className="board-row">
+              <EvalBar scoreCp={shownScoreCp} boardOrientation={boardOrientation} />
+              <div className="board-panel">
+                <Chessboard
+                  options={{
+                    position: currentFen,
+                    boardOrientation,
+                    allowDragging: true,
+                    onPieceDrop: handlePieceDrop,
+                  }}
+                />
+              </div>
             </div>
+            <PlayerStrip {...bottomSide} />
           </div>
 
           {currentLabel && (
             <p className={`move-label-banner ${LABELS[currentLabel.label].className}`}>
               <span className="move-label-glyph">{LABELS[currentLabel.label].glyph}</span>
               {currentLabel.san} is {LABELS[currentLabel.label].name}
-              {currentLabel.bestMoveSan && currentLabel.label !== "best" && currentLabel.label !== "brilliant" && (
+              {currentLabel.bestMoveSan && !NO_BEST_MOVE_HINT.has(currentLabel.label) && (
                 <span className="move-label-best"> · best was {currentLabel.bestMoveSan}</span>
               )}
             </p>
@@ -213,15 +267,6 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
               {review.status === "done" && review.review?.accuracy && (
                 <span className="review-accuracy">
                   <strong>You</strong> {accuracyFor(game.userColor, review.review.accuracy)}% accurate
-                  {ratingFor(game.userColor, review.review.estimatedRating) && (
-                    <span
-                      title="A rough guide to how strong this one game was — not a rating. Accuracy depends a lot on how sharp the position was and how hard your opponent pushed you."
-                      className="estimated-rating"
-                    >
-                      {" "}
-                      · ≈{ratingFor(game.userColor, review.review.estimatedRating)} level this game
-                    </span>
-                  )}
                   <span className="review-opponent">
                     {" "}
                     · opponent {accuracyFor(otherColour(game.userColor), review.review.accuracy)}%
@@ -230,6 +275,10 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
               )}
             </div>
           )}
+
+          {/* The full scorecard — every label counted for both players. Fills
+              in as the review runs; the averages wait until it's finished. */}
+          <ReviewSummary game={game} review={review.review} status={review.status} />
 
           <ol className="move-list">
             {moves.map((move, index) => {
