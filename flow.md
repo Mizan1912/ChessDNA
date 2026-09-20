@@ -39,8 +39,17 @@ researched.
    viewer sitting on that exact position, not just the start of the game. If none of the fetched
    games have clock data in their PGN, says so plainly instead of showing zeros.
 
-The header nav (Games list / Tilt findings / Clock) shows buttons for whichever views you're *not*
-currently on. No routing library is in use yet — the app is four screens toggled by local state in
+4a. **Blunders** — appears via the header nav. Unlike every other page, this one doesn't compute
+   anything until you ask: running Stockfish over a batch of games takes minutes, so it opens with
+   a "Scan N games" button and a rough time estimate. During the scan it shows a progress bar
+   ("analysing game 7 of 50 — 12 blunders so far") and the tab stays fully usable, because the
+   engine runs in a Web Worker rather than on the main thread. When it finishes: a table of every
+   moment you threw the game away — move number, what you played, the evaluation before and after,
+   how much win chance it cost, and how long you spent on it. Clicking any row opens that exact
+   move on the board.
+
+The header nav (Games list / Tilt findings / Clock / Blunders) shows buttons for whichever views
+you're *not* currently on. No routing library is in use yet — the app is four screens toggled by local state in
 `App.jsx`. `react-router` (locked in the tech stack) will be introduced once there are enough
 screens that back/forward browser navigation and shareable URLs actually matter.
 
@@ -120,6 +129,12 @@ Phase 4.
 | `/frontend/src/components/GoogleSignInButton.jsx` | Wraps Google Identity Services' own button; calls back with the credential to send to `/server`. |
 | `/frontend/src/hooks/useAuth.js` | Who's signed in — checks for an existing session on load, exposes `signIn`/`signOut`/`updateChessComUsername`. |
 | `/frontend/src/pages/OnboardingPage.jsx` + `.css` | First-time screen: sign in, or type a username and continue as guest; or (if already signed in) just the username step. |
+| `/frontend/src/pages/BlundersPage.jsx` + `.css` | Phase 4: the scan button, progress bar, and the resulting table of blunders (each row clickable to that position). |
+| `/frontend/src/hooks/useBlunderScan.js` | Runs the scan job: status, progress, results, and cancelling it if you navigate away mid-scan. |
+| `/frontend/src/lib/engine.js` | Drives Stockfish in a Web Worker over the UCI text protocol; normalises every score to White's perspective. |
+| `/frontend/src/lib/blunderScan.js` | Walks each game's moves, evaluates before/after, and decides what counts as a blunder. |
+| `/frontend/src/lib/winPercent.js` | Converts centipawns to win percentage (Lichess's formula) — the measure blunders are actually judged by. |
+| `/frontend/scripts/copy-stockfish.js` | Postinstall step: copies the engine's `.js`/`.wasm` out of node_modules into `public/stockfish/`. |
 | `/frontend/src/lib/backendApi.js` | All calls to `/server` (sign-in, sign-out, `/api/me`, saving the Chess.com username). |
 | `/server` | Standalone Express backend (see D-027 — chosen over Vercel functions so it can be hosted independently). Its own `package.json`, run with `npm run dev` inside `/server`. |
 | `/server/index.js` | Express app setup, CORS, cookie parsing, route wiring. |
@@ -148,7 +163,9 @@ Phase 4.
       guest-to-account migration, auto-restore on return visit. Plumbing fully verified by an
       automated test (session cookie + Mongo + auto-fetch); the actual Google OAuth click-through
       needs your real browser (see RQ-001 in `rnd.md`).
-- [ ] Phase 4 — Stockfish (blunder detection)
+- [x] Phase 4 — Stockfish: engine in a Web Worker, blunder detection, progress bar, click through to
+      each position. Measured at 3.4s/game (50 games ≈ 165s, inside the doc's 3-minute bar).
+      Blunders are judged on win percentage rather than raw centipawns — see D-032.
 - [ ] Phase 4B — Game review (move labels, accuracy)
 - [ ] Phase 5 — Tagging and baseline
 - [ ] Phase 6 — Repetition queue

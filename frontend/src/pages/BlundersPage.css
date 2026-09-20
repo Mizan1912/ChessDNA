@@ -1,0 +1,64 @@
+.blunders-page h2 {
+  margin: 1rem 0 0.5rem;
+  font-size: 1.4rem;
+}
+
+.blunders-lead {
+  margin: 0.75rem 0 1.25rem;
+  max-width: 620px;
+  line-height: 1.5;
+}
+
+.scan-progress {
+  margin-top: 1.25rem;
+  max-width: 480px;
+}
+
+.progress-track {
+  margin-top: 0.6rem;
+  height: 6px;
+  background: var(--color-surface-raised);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--color-accent);
+  transition: width 200ms;
+}
+
+.blunders-table-wrapper {
+  margin-top: 1rem;
+  max-height: 480px;
+  overflow: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.blunders-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--color-bg);
+  white-space: nowrap;
+}
+
+.blunders-table tbody tr {
+  cursor: pointer;
+}
+
+.blunders-table tbody tr:hover {
+  background: var(--color-surface);
+}
+
+.blunders-table tbody tr:hover td {
+  color: var(--color-accent);
+}
+
+.lost-cell {
+  color: var(--color-danger);
+}
+
+.blunders-table tbody tr:hover .lost-cell {
+  color: var(--color-accent);
+}

@@ -1,0 +1,110 @@
+import { useBlunderScan } from "../hooks/useBlunderScan";
+import "./BlundersPage.css";
+
+// Roughly how long a scan takes, measured at depth 12 on real games (see
+// decision.md D-031). Only used to set expectations before the user commits
+// to a multi-minute scan — never presented as a precise number.
+const SECONDS_PER_GAME = 3.5;
+
+function formatEval(centipawns) {
+  const pawns = centipawns / 100;
+  return `${pawns > 0 ? "+" : ""}${pawns.toFixed(1)}`;
+}
+
+export default function BlundersPage({ games, onBack, onOpenGame }) {
+  const { status, progress, blunders, scan } = useBlunderScan();
+
+  const estimatedMinutes = Math.max(1, Math.round((games.length * SECONDS_PER_GAME) / 60));
+  const percentDone = progress.totalGames
+    ? Math.round((progress.gamesDone / progress.totalGames) * 100)
+    : 0;
+
+  return (
+    <div className="blunders-page">
+      <button onClick={onBack}>Back to list</button>
+
+      <h2>Blunders</h2>
+
+      {status === "idle" && (
+        <>
+          <p className="blunders-lead">
+            Runs Stockfish over all {games.length} of these games to find the moments you threw
+            something away. Takes around {estimatedMinutes} minute{estimatedMinutes === 1 ? "" : "s"} —
+            the page stays usable while it runs.
+          </p>
+          <button onClick={() => scan(games)} disabled={games.length === 0}>
+            Scan {games.length} games
+          </button>
+        </>
+      )}
+
+      {status === "scanning" && (
+        <div className="scan-progress">
+          <p>
+            Analysing game {progress.gamesDone} of {progress.totalGames} — {progress.blundersFound}{" "}
+            blunder{progress.blundersFound === 1 ? "" : "s"} so far.
+          </p>
+          <div className="progress-track">
+            <div className="progress-fill" style={{ width: `${percentDone}%` }} />
+          </div>
+        </div>
+      )}
+
+      {status === "error" && (
+        <p className="error-message" role="alert">
+          The engine failed to run. Reloading the page usually fixes it.
+        </p>
+      )}
+
+      {status === "done" && (
+        <>
+          <p className="headline">
+            {blunders.length === 0
+              ? "No blunders found in these games — either you played clean, or there aren't enough games here yet."
+              : `${blunders.length} blunder${blunders.length === 1 ? "" : "s"} across ${progress.totalGames} games.`}
+          </p>
+
+          {blunders.length > 0 && (
+            <div className="blunders-table-wrapper">
+              <table className="blunders-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Move</th>
+                    <th>Played</th>
+                    <th>Eval before</th>
+                    <th>Eval after</th>
+                    <th>Win chance lost</th>
+                    <th>Time spent</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {blunders.map((blunder, index) => (
+                    <tr
+                      key={`${blunder.game.id}-${blunder.plyIndex}-${index}`}
+                      onClick={() => onOpenGame(blunder.game, blunder.plyIndex)}
+                    >
+                      <td>{new Date(blunder.game.playedAt).toLocaleDateString()}</td>
+                      <td>{blunder.moveNumber}</td>
+                      <td>{blunder.movePlayed}</td>
+                      <td>{formatEval(blunder.evalBefore)}</td>
+                      <td>{formatEval(blunder.evalAfter)}</td>
+                      <td className="lost-cell">−{Math.round(blunder.lostWinPercent)}%</td>
+                      <td>
+                        {blunder.clockSeconds === null ? "—" : `${Math.round(blunder.clockSeconds)}s`}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          <p className="analysed-count">
+            Click any row to see that exact position on the board.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}

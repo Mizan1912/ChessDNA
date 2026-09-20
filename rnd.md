@@ -12,9 +12,14 @@ hold what's currently open.
 
 ## Open questions
 
-### RQ-001 — Real Google sign-in needs to be tested by you, in your real browser
+_None currently blocking._
+
+## Resolved
+
+### RQ-001 — Real Google sign-in needs to be tested by you, in your real browser ✅ RESOLVED
 Phase: 3
 Raised: 2026-09-20
+Resolved: 2026-09-20 — user confirmed Google OAuth works in their real browser.
 
 What's blocking: I built and verified the sign-in flow's plumbing (backend rejects bad credentials
 correctly, session cookie round-trips correctly, and — via a manually-inserted test user plus a
@@ -37,6 +42,26 @@ username is still saved to your new account rather than lost.
 Resolved: _pending your test_
 
 ## Watch items (not blocking, but worth knowing about)
+
+### W-002 — Stockfish is GPLv3, and the build doc never mentions licensing
+Noticed: 2026-09-20, Phase 4
+
+What I found: the `stockfish` npm package is licensed **GPLv3** (see
+`frontend/node_modules/stockfish/Copying.txt`). GPLv3 is a "copyleft" licence: the usual reading is
+that if you distribute software that includes GPL code, the whole combined work has to be released
+under GPLv3 too, with source available. This is exactly why Lichess is open-source under AGPL —
+they ship Stockfish.
+
+Why it matters here: the build doc talks about this project eventually making money ("that is far
+more than this project will have before it makes money"), but never mentions licensing at all. If
+Chess DNA is ever distributed as a closed-source commercial product, shipping Stockfish inside it is
+a real legal question, not a technicality.
+
+Nothing to do right now — it's fine for personal use, and fine forever if the project is happy being
+open source. But it's worth a proper look before any paid/closed launch. Options if it becomes a
+problem: keep the project open source (simplest), or move the engine server-side and have it talk
+over an API (commonly argued to avoid the combined-work problem, but genuinely contested — that one
+needs a lawyer, not me).
 
 ### W-001 — Chess.com API is behind Cloudflare bot protection
 Noticed: 2026-09-19, Phase 1

@@ -6,6 +6,82 @@ here.
 
 ---
 
+## D-032 — Blunders are measured in win percentage, not centipawns (pulled forward from Phase 4B)
+Date: 2026-09-20
+Phase: 4
+Decided by: agent
+Needs review: yes
+
+What: The spec's Feature 1 says "flag a move when the eval swings against the player by 150
+centipawns or more." Implemented exactly that first, and the output was mostly junk: of 8 findings
+across 4 real games, 7 were moves where the player was already winning by 3-6 pawns and was STILL
+winning afterwards (+5.2 → +3.6, +5.8 → +3.3). Those aren't mistakes in any sense a player cares
+about. Switched the threshold to win-percentage lost (new `lib/winPercent.js`, Lichess's conversion
+formula) at **15 percentage points**. Same 4 games now produce 5 findings, all real.
+Why: the build doc already says this itself, just later on — Feature 7 (Phase 4B): "classify on win
+percentage, not centipawns. Losing 300cp while already a queen up means nothing... Lichess publishes
+the conversion formula and it is a single line of maths." Since Phase 5's tagging and Phase 6's
+repetition queue are both built on top of whatever Phase 4 flags, shipping a noisy definition of
+"blunder" now would poison both. Better to use the doc's own better idea early than to build two
+phases on a definition the doc itself rejects.
+Why 15 and not the doc's "Blunder = over 20" from Feature 7's label table: 15 points is what 150cp
+actually works out to near equality, so it preserves the original spec's sensitivity in close
+positions (the only place mistakes decide games) while dropping the same swing in a decided one. At
+20 points, genuine equal-to-losing mistakes got filtered out too.
+Alternatives considered: keep raw centipawns as specced (rejected — demonstrably noisy, evidence
+above); use 20 points to match Feature 7's "Blunder" band exactly (rejected — filtered out real
+mistakes like an equal position turning clearly lost).
+Affects: `lib/winPercent.js` (new), `lib/blunderScan.js`, `pages/BlundersPage.jsx`. `winPercent.js`
+is deliberately standalone because Phase 4B's game-review labels need the exact same conversion.
+
+---
+
+## D-031 — Blunder scan thresholds and depth
+Date: 2026-09-20
+Phase: 4
+Decided by: agent
+Needs review: yes
+
+What: The remaining numbers in `lib/blunderScan.js`, all taken from the build doc's Feature 1 spec:
+- `DECIDED_POSITION_CP = 600` — skip positions already worse than -600 or better than +600, since
+  an eval swing there says nothing about judgement. (Doc's own number.)
+- `BOOK_MOVES_SKIPPED = 8` — ignore the first 8 full moves. Doc says "first 6-8 moves"; picked the
+  top of that range.
+- `SCAN_DEPTH = 12` — doc's "Bulk scan" mode is depth 12-14; picked 12 for speed, since this is the
+  fast pass that feeds the DNA, not the deep per-game review (that's Phase 4B at depth 18).
+Measured against real games at these settings: 3.4 seconds per game, so 50 games ≈ 165 seconds —
+inside the doc's "50 games analyse in under 3 minutes" bar, with a little room to spare.
+Why: all three trace directly to the spec; the depth choice is the one real judgement call, and
+it's validated by hitting the doc's own speed target.
+Alternatives considered: depth 14 (slower, would have blown the 3-minute budget at ~50 games).
+Affects: `frontend/src/lib/blunderScan.js`.
+
+---
+
+## D-030 — Stockfish build: lite single-threaded WASM
+Date: 2026-09-20
+Phase: 4
+Decided by: agent
+
+What: Using the `stockfish` npm package's **lite single-threaded** build
+(`stockfish-19-lite-single`, 1.8MB), copied out of `node_modules` into `public/stockfish/` by a
+postinstall script (`frontend/scripts/copy-stockfish.js`) and gitignored. It runs inside a Web
+Worker, never on the main thread.
+Why: the package ships five builds. The full ones are ~99MB — completely unusable as a browser
+download. Single-threaded avoids needing COOP/COEP cross-origin headers, exactly as the build doc's
+tech-stack notes call for. The package's own README recommends this same build for this same
+reason. Copying to `public/` rather than importing it is necessary because the engine's JS loads its
+`.wasm` sibling by URL at runtime, so both files must sit together at a real served path.
+Verified: boots in ~315ms; evaluates a position at depth 12 in 13-80ms; correctly reports a
+queen-up position as ±1000cp; and — the part most likely to be silently wrong — correctly flips
+scores to a single fixed perspective, since UCI reports them from whoever is to move.
+Alternatives considered: full single-threaded build (99MB, rejected); lite multi-threaded (needs
+COOP/COEP headers the doc explicitly says to avoid); asm.js (3MB and far slower, last-resort only).
+Affects: `frontend/scripts/copy-stockfish.js`, `frontend/src/lib/engine.js`, `.gitignore`,
+`frontend/package.json` (postinstall).
+
+---
+
 ## D-029 — Dedicated onboarding screen, guest mode kept as an explicit choice
 Date: 2026-09-20
 Phase: 3

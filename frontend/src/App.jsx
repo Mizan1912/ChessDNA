@@ -3,6 +3,7 @@ import GamesListPage from "./pages/GamesListPage";
 import GameViewerPage from "./pages/GameViewerPage";
 import TiltPage from "./pages/TiltPage";
 import ClockPage from "./pages/ClockPage";
+import BlundersPage from "./pages/BlundersPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import TimeClassTabs from "./components/TimeClassTabs";
 import GoogleSignInButton from "./components/GoogleSignInButton";
@@ -15,6 +16,7 @@ const VIEWS = [
   { key: "list", label: "Games list" },
   { key: "tilt", label: "Tilt findings" },
   { key: "clock", label: "Clock" },
+  { key: "blunders", label: "Blunders" },
 ];
 
 function App() {
@@ -140,6 +142,11 @@ function App() {
     }
     if (activeView === "clock") {
       return <ClockPage games={fetched.filteredGames} onBack={() => setActiveView("list")} onOpenGame={openGame} />;
+    }
+    if (activeView === "blunders") {
+      return (
+        <BlundersPage games={fetched.filteredGames} onBack={() => setActiveView("list")} onOpenGame={openGame} />
+      );
     }
     return (
       <GamesListPage

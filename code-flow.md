@@ -255,6 +255,43 @@ username) and calls back to whichever handler fits what the person did:
 - On the "needs username only" shape, submitting the form calls `onUsernameSubmit(username)`
   directly — no guest option shown, since they're already signed in.
 
+## 4e. Finding blunders with Stockfish
+
+**Files involved:** `lib/engine.js` → `lib/blunderScan.js` (+ `lib/winPercent.js`) →
+`hooks/useBlunderScan.js` → `pages/BlundersPage.jsx`
+
+This is the first part of the app that needs a real chess engine rather than plain board logic.
+
+1. **The engine runs in a Web Worker** (`engine.js`). A Web Worker is just "JavaScript running on a
+   separate thread," and here it's not optional: analysing 50 games pins a CPU core for minutes, and
+   on the main thread that would freeze the entire tab — no scrolling, no clicking, browser warning
+   you the page is unresponsive. The build doc calls this out as the single most common way this
+   kind of feature goes wrong.
+2. **Talking to it is just text.** Stockfish speaks UCI, a line-based protocol: send it
+   `position fen <the position>`, then `go depth 12`, and it streams back lines like
+   `info depth 12 ... score cp -45 ... pv e2e4`, finishing with `bestmove e2e4`. `engine.js` wraps
+   that in a normal promise, so the rest of the code just does `await engine.evaluate(fen, 12)`.
+3. **One gotcha worth knowing**: UCI reports scores from *the perspective of whoever is to move*.
+   So "+300" means "+300 for Black" if it's Black's turn. Comparing two positions without fixing
+   that would produce nonsense. `engine.js` flips every score to one fixed perspective (positive =
+   good for White), and `blunderScan.js` flips again into "good for the player whose games these
+   are."
+4. **Deciding what's a blunder** (`blunderScan.js`): for each of the player's own moves, evaluate
+   the position before it and after it. The difference is what the move threw away. Three filters
+   keep the noise down: skip the first 8 moves (opening theory, not real decisions), skip positions
+   already decided (beyond ±600 centipawns), and require a real drop.
+5. **That "real drop" is measured in win percentage, not centipawns** (`winPercent.js`). This is the
+   part worth understanding, because it's the difference between a useful feature and a useless one.
+   Centipawns are linear, but chess isn't: going from +500 to +200 is *nothing* (you were winning,
+   you're still winning), while going from +50 to -250 loses the game. Converting both evals to
+   "what percent of the time does someone win from here" and comparing those instead matches how
+   much actually changed. In testing this cut the findings from 8 to 5 on the same four games, and
+   the 3 it dropped were all "was winning by 5 pawns, still winning by 3."
+6. **The UI never starts this by itself** (`useBlunderScan.js`, `BlundersPage.jsx`). A scan costs
+   minutes, so it's always a button press. The hook tracks progress (reported after each game) so
+   the page can show a real progress bar, and sets a cancelled flag if you navigate away, so the
+   engine doesn't keep grinding invisibly in the background.
+
 ## 5. Showing evidence for a finding
 
 **Files involved:** `components/GameEvidenceList.jsx`
@@ -279,3 +316,5 @@ Pick the feature, then read the files in this order — each one calls into the 
 - **Time-class filter:** `timeClass.js` → `useFetchedGames.js` → `TimeClassTabs.jsx` (rendered by `App.jsx`)
 - **Sign-in:** `GoogleSignInButton.jsx` → `backendApi.js` → `/server/auth.js` → `/server/jwt.js` +
   `/server/db.js` → back to `useAuth.js` on the next `/api/me` check
+- **Blunders:** `engine.js` → `blunderScan.js` (+ `winPercent.js`) → `useBlunderScan.js` →
+  `BlundersPage.jsx`

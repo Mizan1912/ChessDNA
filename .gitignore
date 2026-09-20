@@ -20,3 +20,7 @@ Thumbs.db
 
 # agent scratch space (screenshots, throwaway scripts used for self-verification)
 .scratch/
+
+# Stockfish engine files, copied out of node_modules on postinstall — see
+# frontend/scripts/copy-stockfish.js. No need for a 1.8MB binary in git.
+frontend/public/stockfish/
