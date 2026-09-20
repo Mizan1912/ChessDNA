@@ -10,7 +10,7 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "GPL-3.0",
   "type": "module",
   "dependencies": {
     "cookie-parser": "^1.4.7",
