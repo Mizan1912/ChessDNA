@@ -14,6 +14,10 @@ function formatSeconds(seconds) {
   return seconds < 10 ? `${seconds.toFixed(1)}s` : `${Math.round(seconds)}s`;
 }
 
+const otherColour = (colour) => (colour === "black" ? "white" : "black");
+const accuracyFor = (colour, accuracy) => accuracy?.[colour] ?? "—";
+const ratingFor = (colour, estimatedRating) => estimatedRating?.[colour] ?? null;
+
 // `initialMoveIndex` is the move a finding elsewhere in the app (the clock
 // page's "longest think" or "known position" findings) wants highlighted and
 // animated when this viewer opens — e.g. the slow move itself, not the game
@@ -48,7 +52,9 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
   // click puts it back.
   const [exploring, setExploring] = useState(null);
 
-  const review = useGameReview();
+  // Starts by itself on open, and comes back instantly for a game that's
+  // already been reviewed once.
+  const review = useGameReview(game);
 
   useEffect(() => {
     if (initialMoveIndex === -1) return;
@@ -61,8 +67,12 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
   const currentFen = exploring?.fen ?? gameFen;
 
   // The bar follows whatever is on the board, including positions you made up
-  // yourself while exploring.
-  const liveScoreCp = useLiveEval(currentFen);
+  // yourself while exploring. Stood down while a review is running, unless
+  // you're off exploring your own line — otherwise a second engine competes
+  // with the review for CPU, and the review is already producing evaluations
+  // for every position in the game anyway.
+  const liveEvalEnabled = exploring !== null || review.status !== "reviewing";
+  const liveScoreCp = useLiveEval(currentFen, liveEvalEnabled);
 
   // Once the game has been reviewed, prefer its deeper, more careful number
   // for positions that are actually part of the game.
@@ -189,19 +199,33 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
             </p>
           ) : (
             <div className="review-controls">
-              {review.status === "idle" && (
-                <button onClick={() => review.run(game)}>Review this game</button>
-              )}
               {review.status === "reviewing" && (
                 <span className="review-progress">
                   Reviewing… move {Math.ceil(review.progress.plyDone / 2)} of{" "}
                   {Math.ceil(review.progress.totalPlies / 2)}
                 </span>
               )}
-              {review.status === "error" && <span className="error-message">Review failed.</span>}
+              {review.status === "error" && (
+                <span className="error-message">
+                  Review failed. <button onClick={() => review.run(game)}>Try again</button>
+                </span>
+              )}
               {review.status === "done" && review.review?.accuracy && (
                 <span className="review-accuracy">
-                  Accuracy — white {review.review.accuracy.white}, black {review.review.accuracy.black}
+                  <strong>You</strong> {accuracyFor(game.userColor, review.review.accuracy)}% accurate
+                  {ratingFor(game.userColor, review.review.estimatedRating) && (
+                    <span
+                      title="A rough guide to how strong this one game was — not a rating. Accuracy depends a lot on how sharp the position was and how hard your opponent pushed you."
+                      className="estimated-rating"
+                    >
+                      {" "}
+                      · ≈{ratingFor(game.userColor, review.review.estimatedRating)} level this game
+                    </span>
+                  )}
+                  <span className="review-opponent">
+                    {" "}
+                    · opponent {accuracyFor(otherColour(game.userColor), review.review.accuracy)}%
+                  </span>
                 </span>
               )}
             </div>

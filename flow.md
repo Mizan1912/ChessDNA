@@ -19,11 +19,14 @@ researched.
    the user's own colour, with an **evaluation bar** beside it (under it, on a phone) showing who's
    winning and by how much. The bar updates live as you step through the game. You can also **drag
    pieces to play your own moves** from any position — doing so branches into "exploring your own
-   line", with the bar following along, and a button to drop back into the real game. A **"Review
-   this game"** button runs a full engine pass (around 45 seconds, with progress) and then labels
-   every move — Brilliant, Great, Best, Excellent, Good, Inaccuracy, Mistake, Miss, Blunder — in the
-   move list, with the current move's verdict spelled out under the board ("Be3 is Good · best was
-   d5") and an accuracy score for both players. Every move also shows its thinking time (e.g.
+   line", with the bar following along, and a button to drop back into the real game. The **review
+   starts automatically** on opening a game: an engine pass labelling every move — Brilliant, Great,
+   Best, Excellent, Good, Inaccuracy, Mistake, Miss, Blunder — in the move list, with the current
+   move's verdict spelled out under the board ("Be3 is Good · best was d5"), plus accuracy for both
+   players and a rough "≈2236 level this game" strength estimate. Labels appear one at a time as
+   they're worked out rather than all at the end, and a game is only ever analysed once — finished
+   reviews are saved in the browser, so reopening one shows everything in about a second instead of
+   re-analysing for half a minute. Every move also shows its thinking time (e.g.
    "c5 9.7s") when the game has clock data. Opens at the starting position by default — except when opened from a clock
    finding, which jumps straight to the exact position that finding is about. Prev/next/start/end
    buttons and a flip-board button step through the game; clicking any move in the list jumps
@@ -147,7 +150,8 @@ Phase 4.
 | `/frontend/src/lib/explainBlunder.js` | Works out *why* a move was bad (lost a piece / allowed mate / hung something) and writes it as a sentence. |
 | `/frontend/src/lib/moveLabels.js` | The Brilliant/Great/Best/…/Blunder classification rules, and each label's glyph and colour. |
 | `/frontend/src/lib/reviewGame.js` | Phase 4B's deep review: evaluates every position of one game, labels every move, scores accuracy. |
-| `/frontend/src/hooks/useGameReview.js` | Runs that review for the open game, with progress and cancellation. |
+| `/frontend/src/hooks/useGameReview.js` | Runs that review for the open game — auto-starts, reads/writes the cache, reports partial results. |
+| `/frontend/src/lib/reviewCache.js` | Saves finished reviews in the browser (IndexedDB) so a game is only ever analysed once. |
 | `/frontend/src/hooks/useLiveEval.js` | Quick depth-12 evaluation of whatever position is on the board, for the bar. |
 | `/frontend/src/components/EvalBar.jsx` + `.css` | The vertical (horizontal on mobile) evaluation bar. |
 | `/frontend/scripts/copy-stockfish.js` | Postinstall step: copies the engine's `.js`/`.wasm` out of node_modules into `public/stockfish/`. |
@@ -184,8 +188,9 @@ Phase 4.
       Blunders are judged on win percentage rather than raw centipawns — see D-032.
 - [x] Phase 4B — Game review: per-move labels (Brilliant…Blunder), accuracy for both sides,
       evaluation bar, and a playable analysis board. Runs at depth 14/MultiPV 2 rather than the
-      doc's 18/3 — measured 44.6s vs 208s for near-identical output, see D-034. No "Book" label
-      (we have no opening file) and no IndexedDB caching of reviews yet.
+      doc's 18/3 — measured near-identical output for a fraction of the time, see D-034. Reviews
+      auto-start, stream in as computed, and are cached in the browser (26s first time, ~1s after).
+      No "Book" label — we have no opening file, see D-034.
 - [ ] Phase 5 — Tagging and baseline
 - [ ] Phase 6 — Repetition queue
 - [ ] Phase 7 — Opening fit

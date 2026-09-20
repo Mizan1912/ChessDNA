@@ -360,8 +360,38 @@ Three separate things share one screen, and they work quite differently:
    the label that embarrasses you, so when in doubt it downgrades to Great.
 
 **Why depth 14 and not the doc's 18:** measured, depth 18 with three lines took 208 seconds on one
-92-ply game. Depth 14 with two lines took 44.6 and produced practically the same verdicts. The
-numbers in the doc were a starting guess; these are what the machine actually does.
+92-ply game. Depth 14 with two lines produced practically the same verdicts in a fraction of the
+time. The numbers in the doc were a starting guess; these are what the machine actually does.
+
+**And why not go lower still, to depth 12?** Also measured — it's 3-6x faster again, but it only
+agrees with depth 14 on 59-70% of labels, and disagrees *seriously* (one says the move was fine,
+the other says it was a mistake) several times per game. That's not a speed win, it's wrong
+answers delivered faster. Slowness got solved a different way instead:
+
+## 4h. Making the review feel fast without making it worse
+
+**Files involved:** `lib/reviewCache.js`, `hooks/useGameReview.js`
+
+Three things, none of which touch the quality of the analysis:
+
+1. **It only ever runs once per game.** A finished review is saved in the browser's own database
+   (IndexedDB) under that game's id. Reopening the game loads the saved copy — about a second,
+   versus half a minute to redo it. Saved reviews carry a stamp naming the settings they were
+   produced with (`d14-mpv2-v1`); if those settings ever change, old records are ignored and
+   re-analysed rather than being shown as though they were still current. Every storage call is
+   wrapped in a try/catch, because private browsing and full disks are real and neither should
+   break the page — they just mean "no cache".
+2. **It starts on its own** when you open a game. If there's a saved copy there's nothing to wait
+   for; if there isn't, the analysis runs while you're already looking at the board rather than
+   after you've hunted for a button.
+3. **Results appear as they're found.** Each progress tick carries the moves worked out so far, so
+   labels fill in from move one rather than appearing all at once at the end. Accuracy is held back
+   until the end on purpose — an average over half a game would be a misleading number.
+
+One other thing that mattered: the evaluation bar runs its own engine, and while a review was
+running that meant *two* Stockfish workers fighting over the CPU. The bar now stands down during a
+review (except when you're exploring your own line, which the review knows nothing about). That
+single change took a first review from about 44 seconds to about 26.
 
 ## 5. Showing evidence for a finding
 

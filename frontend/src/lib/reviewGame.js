@@ -34,6 +34,20 @@ function accuracyFromLosses(losses) {
   return Math.max(0, Math.min(100, Math.round(100 - averageLoss * 2.5)));
 }
 
+// A rough rating-strength estimate for how someone played in THIS game.
+//
+// Worth being blunt about what this is: the build doc explicitly says not to
+// invent a rating from accuracy ("Do not invent a rating estimate from it in
+// v1"), and it has a point — accuracy depends heavily on how sharp the
+// position was, how long the time control was, and how much the opponent
+// tested you. A quiet drawn game can be 95% accurate for a beginner. This is
+// therefore labelled in the UI as a per-game performance estimate, never as
+// "your rating". Added on explicit request — see decision.md D-037.
+export function ratingFromAccuracy(accuracy) {
+  if (accuracy === null) return null;
+  return Math.round(Math.max(400, Math.min(2900, (accuracy - 52) * 52)));
+}
+
 /**
  * Reviews one game end to end.
  *
@@ -110,20 +124,33 @@ export async function reviewGame(game, { onProgress, isCancelled } = {}) {
         winPercentLost: lost,
       });
 
-      onProgress?.({ plyDone: plyIndex + 1, totalPlies: moves.length });
+      // Hand back what's been worked out so far, not just a counter — the
+      // viewer shows labels as they land rather than making you stare at a
+      // progress number for twenty seconds with nothing to look at.
+      onProgress?.({
+        plyDone: plyIndex + 1,
+        totalPlies: moves.length,
+        partial: { moves: [...reviewed], evalAfterPly: [...evalAfterPly], startingEval },
+      });
       previous = after;
     }
   } finally {
     engine.stop();
   }
 
+  const accuracy = {
+    white: accuracyFromLosses(lossesByColor.w),
+    black: accuracyFromLosses(lossesByColor.b),
+  };
+
   return {
     moves: reviewed,
     startingEval,
     evalAfterPly,
-    accuracy: {
-      white: accuracyFromLosses(lossesByColor.w),
-      black: accuracyFromLosses(lossesByColor.b),
+    accuracy,
+    estimatedRating: {
+      white: ratingFromAccuracy(accuracy.white),
+      black: ratingFromAccuracy(accuracy.black),
     },
   };
 }

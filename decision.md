@@ -6,6 +6,62 @@ here.
 
 ---
 
+## D-038 — Reviews are cached, auto-started, and shown as they're computed
+Date: 2026-09-20
+Phase: 4B
+Decided by: user
+
+What: Three changes to how a review is experienced, all from the user reporting it as too slow and
+having to re-run per game:
+1. **Cached in IndexedDB** (`lib/reviewCache.js`). A finished review is saved under the game's id,
+   so reopening that game shows its labels immediately instead of re-analysing. Measured: 26s the
+   first time, **1.3 seconds after a full page reload**. Cached records carry a format stamp
+   (`d14-mpv2-v1`); if the depth or the labelling rules ever change, old records are ignored and
+   re-analysed rather than shown as if they were current. All storage access is wrapped so private
+   browsing or a full quota degrades to "no cache", never to a broken page.
+2. **Starts by itself** when a game is opened — no button. If it's cached, there's nothing to wait
+   for anyway; if it isn't, the analysis overlaps with looking at the board instead of following a
+   click.
+3. **Labels appear as they're computed**, not all at the end. `reviewGame` now hands back the moves
+   worked out so far with each progress tick. Accuracy is deliberately withheld until the end,
+   since a half-finished average would be misleading.
+Also made a real speed fix found while measuring: the live evaluation bar was running a **second**
+Stockfish worker alongside the review, competing for CPU. It now stands down while a review is in
+progress (unless you're exploring your own line, where the review has nothing to say). That alone
+took the first review from ~44s to ~26s.
+Why not just lower the depth instead: measured it. Depth 12 is 3-6x faster but agrees with depth 14
+on only **59-70%** of labels, with 1-6 serious disagreements per game (one depth calls a move fine,
+the other calls it a mistake). That's a real accuracy loss, so the slowness was solved by removing
+repetition and dead waiting rather than by making the analysis worse.
+Affects: `lib/reviewCache.js` (new), `lib/reviewGame.js`, `hooks/useGameReview.js`,
+`pages/GameViewerPage.jsx`.
+
+---
+
+## D-037 — Estimated rating from accuracy, against the doc's advice
+Date: 2026-09-20
+Phase: 4B
+Decided by: user
+Needs review: yes
+
+What: A review now also reports an approximate playing strength per side, derived from accuracy,
+shown as "≈2236 level this game".
+Why this is flagged: the build doc explicitly says **not** to do this — "Do not invent a rating
+estimate from it in v1" — and its caution is well founded. Accuracy depends heavily on how sharp
+the position was, the time control, and whether the opponent ever tested you; a quiet drawn game
+can be 95% accurate for a beginner. It also under-reads badly at the top (a super-GM bullet game
+measured 95% accuracy, which this maps to ≈2236, far below their real strength). Built anyway
+because the user asked for it directly.
+How the risk is managed: it is never called "your rating". It's phrased per-game ("≈X level this
+game"), carries a tilde, and has a hover explanation saying it's a rough guide and not a rating.
+Alternatives considered: refusing on the doc's authority (rejected — the user's explicit request
+beats a default, as long as the caveats are honest and visible); calibrating against real rating
+data (there isn't any yet — that's what the Phase 5 baseline work is for, and this could be revisited
+then).
+Affects: `lib/reviewGame.js` (`ratingFromAccuracy`), `pages/GameViewerPage.jsx`/`.css`.
+
+---
+
 ## D-036 — Evaluation bar runs live and shallow, separate from the deep review
 Date: 2026-09-20
 Phase: 4B
