@@ -1,0 +1,42 @@
+/* The medal scales with the board, not with the screen: `.board-panel` is
+   declared a size container (see GameViewerPage.css), so 1cqw is 1% of the
+   board's width and the medal stays the same fraction of a square at every
+   size — no breakpoints needed. */
+.move-badge {
+  position: absolute;
+  top: -9%;
+  right: -9%;
+  z-index: 3;
+  width: 5.8cqw;
+  height: 5.8cqw;
+  overflow: visible;
+  pointer-events: none;
+  /* Shadow only, no outline. A ring in the page's dark background was tried
+     first and it was exactly what made these look cheap: a hard black circle
+     around every medal reads as a sticker pasted on. A soft shadow lifts the
+     medal off the board without drawing a line around it. */
+  border-radius: 50%;
+  box-shadow: 0 0.18cqw 0.45cqw rgba(0, 0, 0, 0.38);
+}
+
+/* The punctuation marks (!!, ?, ?!, ??) are the one part still set in type
+   rather than drawn, so they get the app's own font at a weight that holds up
+   small, rather than whatever the SVG default would be. */
+.badge-text {
+  fill: #fff;
+  font-family: var(--font-body);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+/* The square wrapper the medal lives in. It replaces the board's own inner
+   square div, so it has to keep filling the square and keep rendering the
+   piece — the medal is simply added on top. */
+.square-layer {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

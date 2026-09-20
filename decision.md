@@ -6,6 +6,54 @@ here.
 
 ---
 
+## D-044 — The move's verdict is drawn on the board, on the square it landed on
+Date: 2026-09-21
+Phase: 4B
+Decided by: user
+
+What: Three things the board now shows about the move you're looking at:
+
+1. **A coloured medal on the destination square** (`components/MoveBadge.jsx`) — a red `??` on a
+   blunder, a green star on a best move, and so on. It hangs off the square's top-right corner so
+   it never covers the piece it's judging. You're already looking at the piece; the verdict should
+   find you there rather than making you hunt for it in a list.
+
+   It's **drawn as SVG, not as a text glyph in a coloured circle**. The glyph version was built
+   first and the user's verdict was that it looked cheap. Two reasons, both worth remembering: the
+   marks were whatever the page font supplied — a star and a book character borrowed from different
+   typefaces, landing at different weights and heights — and a flat disc has no depth. Now every
+   mark is a drawn path at a weight we choose, on a disc with a gradient lit from above and a
+   hairline inner bevel.
+
+   The first pass at "depth" also went wrong in an instructive way: a hard ring in the page's dark
+   background colour was drawn around each medal, which made them read as stickers pasted onto the
+   board. Removed. A soft drop shadow alone lifts the medal off the board without drawing a line
+   around it.
+2. **Both of the move's squares lit**, so where the piece came from is obvious.
+3. **A green arrow showing what you should have played instead**, drawn only when there was
+   something better — nothing to suggest after a best, great, brilliant or theory move.
+
+None of it applies while you're exploring a line of your own, which isn't part of the game.
+
+Two implementation notes worth knowing:
+
+- The medals are sized in `cqw` against `.board-panel`, which is declared a size container. 1cqw is
+  1% of the board's width, so a medal stays the same fraction of a square at any board size with no
+  breakpoints. Measured at 22px on desktop and 19px on a phone.
+- `react-chessboard`'s `squareRenderer` **replaces** the board's own inner square element, and with
+  it the board's handling of `squareStyles` — the library only applies those when no renderer is
+  supplied. So the highlight styles are applied by our renderer directly. Verified afterwards that
+  dragging to explore a line still works with the custom renderer in place, since that was the
+  obvious thing to break.
+
+Cache format bumped again (`-v2` -> `-v3`): reviewed moves now carry their from/to squares and the
+best move in raw UCI, which a v2 record simply doesn't have.
+
+Affects: `components/MoveBadge.jsx` + `.css` (new), `lib/pgnToMoves.js` (now carries `from`/`to`),
+`lib/reviewGame.js`, `lib/reviewCache.js`, `pages/GameViewerPage.jsx` + `.css`.
+
+---
+
 ## D-043 — The game-review scorecard, and why every cached review was thrown away
 Date: 2026-09-21
 Phase: 4B

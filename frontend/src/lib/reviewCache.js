@@ -15,7 +15,10 @@ const DB_VERSION = 1;
 // v2: stricter Great/Brilliant, opening book, Lichess-curve accuracy (D-039,
 // D-040, D-041). Everything saved under v1 was scored by the old, looser
 // rules, so it is discarded rather than mixed in with the new numbers.
-export const REVIEW_FORMAT = "d14-mpv2-v2";
+// v3: reviewed moves now carry their from/to squares and the best move in
+// UCI, which the board needs for the medals and the suggestion arrow — a v2
+// record simply doesn't have those fields (D-044).
+export const REVIEW_FORMAT = "d14-mpv2-v3";
 
 function openDb() {
   return new Promise((resolve, reject) => {

@@ -152,6 +152,7 @@ Phase 4.
 | `/frontend/src/lib/openingBook.js` | 79 mainstream opening lines — what makes a move "Book". Deliberately small, so it under-fires rather than lying (D-041). |
 | `/frontend/src/components/ReviewSummary.jsx` + `.css` | The review scorecard: both players' accuracy, a count of every label each played, and the per-game rating estimate. |
 | `/frontend/src/components/PlayerStrip.jsx` + `.css` | One player's row above or below the board — name, rating, and their clock at the move you're looking at. |
+| `/frontend/src/components/MoveBadge.jsx` + `.css` | The coloured move-quality medal drawn on the square a piece just moved to. |
 | `/frontend/src/lib/reviewGame.js` | Phase 4B's deep review: evaluates every position of one game, labels every move, scores accuracy. |
 | `/frontend/src/hooks/useGameReview.js` | Runs that review for the open game — auto-starts, reads/writes the cache, reports partial results. |
 | `/frontend/src/lib/reviewCache.js` | Saves finished reviews in the browser (IndexedDB) so a game is only ever analysed once. |
@@ -201,6 +202,9 @@ Phase 4.
       side, and the per-game rating estimate — the Chess.com sidebar, same shape.
 - [x] Phase 4B — Both players' clocks beside the board, opponent above and you below, updating as
       you step through the game (D-042).
+- [x] Phase 4B — Move quality drawn on the board itself (D-044): a coloured medal on the square the
+      piece landed on, both of the move's squares lit, and a green arrow showing the better move
+      when there was one.
 - [ ] Phase 5 — Tagging and baseline
 - [ ] Phase 6 — Repetition queue
 - [ ] Phase 7 — Opening fit

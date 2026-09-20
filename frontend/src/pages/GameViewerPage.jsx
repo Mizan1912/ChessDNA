@@ -7,6 +7,7 @@ import { LABELS } from "../lib/moveLabels";
 import EvalBar from "../components/EvalBar";
 import PlayerStrip from "../components/PlayerStrip";
 import ReviewSummary from "../components/ReviewSummary";
+import MoveBadge from "../components/MoveBadge";
 import { useLiveEval } from "../hooks/useLiveEval";
 import { useGameReview } from "../hooks/useGameReview";
 import "./GameViewerPage.css";
@@ -96,6 +97,46 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
   }, [review.review]);
 
   const currentLabel = !exploring && moveIndex >= 0 ? labelsByPly.get(moveIndex) : null;
+
+  // --- what the board itself shows about the current move ---
+  // The move you're looking at, its two squares lit, and its quality medal
+  // sitting on the square the piece landed on. None of this applies while
+  // you're exploring a line of your own, which isn't part of the game.
+  const playedMove = !exploring && moveIndex >= 0 ? moves[moveIndex] : null;
+
+  const squareStyles = useMemo(() => {
+    if (!playedMove) return {};
+    const lit = { backgroundColor: "rgba(224, 182, 65, 0.28)" };
+    return { [playedMove.from]: lit, [playedMove.to]: lit };
+  }, [playedMove]);
+
+  // "You should have played this instead" — drawn only when there was
+  // something better. Nothing to suggest after a top move or a theory move.
+  const arrows = useMemo(() => {
+    if (!playedMove || !currentLabel?.bestMoveUci) return [];
+    if (NO_BEST_MOVE_HINT.has(currentLabel.label)) return [];
+    return [
+      {
+        startSquare: currentLabel.bestMoveUci.slice(0, 2),
+        endSquare: currentLabel.bestMoveUci.slice(2, 4),
+        color: "#8bc34a",
+      },
+    ];
+  }, [playedMove, currentLabel]);
+
+  // Replaces the board's own inner square div, so it has to keep rendering
+  // the piece — and it has to apply the square highlights itself, because
+  // the board only uses its own `squareStyles` when no renderer is supplied.
+  function renderSquare({ square, children }) {
+    return (
+      <div className="square-layer" style={squareStyles[square]}>
+        {children}
+        {playedMove && square === playedMove.to && currentLabel && (
+          <MoveBadge label={currentLabel.label} />
+        )}
+      </div>
+    );
+  }
 
   // --- the two clocks beside the board ---
   // A player's clock at this point in the game is whatever it read after
@@ -208,6 +249,8 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
                     boardOrientation,
                     allowDragging: true,
                     onPieceDrop: handlePieceDrop,
+                    arrows,
+                    squareRenderer: renderSquare,
                   }}
                 />
               </div>

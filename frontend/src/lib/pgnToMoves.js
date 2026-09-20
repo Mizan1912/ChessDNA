@@ -13,6 +13,10 @@ export function pgnToMoves(pgn) {
     moveNumber: Math.floor(index / 2) + 1,
     color: move.color, // "w" or "b"
     san: move.san, // e.g. "Nf6", "O-O", "Qxd8+"
+    // The two squares the move ran between — what the board highlights, what
+    // the quality badge sits on, and where the arrow is drawn.
+    from: move.from,
+    to: move.to,
     fenBefore: move.before,
     fenAfter: move.after,
   }));

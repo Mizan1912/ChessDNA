@@ -419,7 +419,40 @@ moved, both show the starting time from the PGN's time-control header. Whoever i
 gets the lit clock, and under ten seconds it shows tenths and turns red — which is exactly when
 tenths start to matter.
 
-## 4j. Being as strict as Chess.com
+## 4j. Putting the verdict on the board
+
+**Files involved:** `components/MoveBadge.jsx`, `pages/GameViewerPage.jsx`
+
+The move list already said what every move was worth, but you have to go and read it there. The
+board now says it where you're already looking: a coloured medal sits on the square the piece
+landed on — a red `??` for a blunder, a green star for a best move — hanging off the corner so it
+never covers the piece it's judging. Both of the move's squares are lit, so where the piece came
+from is obvious, and when there was something better to play a green arrow shows it. After a best
+or a theory move there's no arrow, because there's nothing to suggest.
+
+**The medals are drawn, not typed.** The first version put a text character inside a coloured
+circle — a star, a book symbol, a question mark — and it looked cheap, because the shapes were
+whatever the page font happened to supply, borrowed from different typefaces at different weights
+and heights. Now each mark is a vector path we drew ourselves, on a disc with a gradient lit from
+above, so the whole set matches and the marks stay crisp at any size.
+
+Two more things about how this is built that would otherwise be puzzling:
+
+**The medals are sized against the board, not the screen.** `.board-panel` is declared a CSS
+"container", which lets the medal say "be 5.6% of the board's width" and have that mean the right
+thing whether the board is 420 pixels on a laptop or the full width of a phone. No breakpoints, no
+JavaScript measuring anything — 22px on desktop, 19px on a phone, both the same fraction of a
+square.
+
+**The board hands us the square to draw, and takes something away in return.** `react-chessboard`
+lets you supply your own renderer for each square, which is how the medal gets in there. But
+supplying one *replaces* the board's own square element, and with it the board's handling of square
+highlight styles — it only applies those when you haven't supplied a renderer. So our renderer
+applies the highlights itself. This is the kind of thing that silently does nothing rather than
+erroring, so the highlights were checked on screen rather than assumed, and dragging-to-explore was
+re-tested afterwards since a custom square renderer is exactly the sort of change that breaks it.
+
+## 4k. Being as strict as Chess.com
 
 **Files involved:** `lib/moveLabels.js`, `lib/openingBook.js`, `lib/reviewGame.js`
 

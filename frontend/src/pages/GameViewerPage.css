@@ -52,7 +52,11 @@
   align-items: stretch;
 }
 
+/* container-type makes this the reference the move-quality medals size
+   themselves against (1cqw = 1% of the board's width), so they stay the same
+   fraction of a square whether the board is 420px or a phone's full width. */
 .board-panel {
+  container-type: inline-size;
   width: 420px;
   max-width: 100%;
   flex-shrink: 1;

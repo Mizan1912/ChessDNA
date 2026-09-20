@@ -127,7 +127,8 @@ export async function reviewGame(game, { onProgress, isCancelled } = {}) {
 
       // Did they play what the engine wanted? Compared in readable notation
       // so promotions and castling don't trip up a raw string comparison.
-      const engineBestSan = uciToSan(move.fenBefore, previous.lines[0]?.move ?? previous.bestMove);
+      const engineBestUci = previous.lines[0]?.move ?? previous.bestMove;
+      const engineBestSan = uciToSan(move.fenBefore, engineBestUci);
       const playedBestMove = engineBestSan !== null && engineBestSan === move.san;
 
       const secondLine = previous.lines[1];
@@ -174,6 +175,11 @@ export async function reviewGame(game, { onProgress, isCancelled } = {}) {
         label,
         evalAfter: after.scoreCp, // White's perspective, for the bar
         bestMoveSan: engineBestSan,
+        // Kept in raw UCI as well as notation, because the board draws the
+        // "you should have played this" arrow from the two squares.
+        bestMoveUci: engineBestUci ?? null,
+        from: move.from,
+        to: move.to,
         winPercentLost: lost,
       });
 
