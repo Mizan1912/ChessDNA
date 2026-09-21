@@ -179,8 +179,12 @@ Phase 4.
 - [x] Phase 0 — Setup: repo skeleton, `/frontend` scaffold, `.gitignore`, `.env.example`,
       `decision.md`, `flow.md`, `rnd.md` created. (The original `/api` placeholder from this phase
       was later removed — see D-027, backend became `/server` instead.)
-- [ ] Phase 0 — Deploy: in progress. Frontend on Vercel, backend on Render, one domain via a
-      `/api/*` rewrite — see D-045. Repo prep done; dashboards (Render, Vercel, Google, Atlas) next.
+- [x] Phase 0 — Deployed, 2026-09-21. Live at **https://chess-dna-nu.vercel.app** (frontend, Vercel);
+      backend at https://chessdna.onrender.com (Render, free tier), reached only through the site's
+      own `/api/*` rewrite so the login cookie stays same-site (D-045). An uptime monitor pings
+      `/api/health` every 5 minutes so the free backend never sleeps (D-047). Pushing to `main`
+      redeploys both automatically. Verified live: the rewrite, the guest flow, an engine review, and
+      Google sign-in surviving a reload. One loose end: the MongoDB password rotation (W-003).
 - [x] Phase 1 — Chess.com: fetch games, list, game viewer with move-by-move playback, design system
 - [ ] Phase 1 — Lichess (parked, see D-011 in `decision.md`)
 - [x] Phase 2 — Tilt detector (Feature 2): sessions, break point, tilt chain, worst hour, evidence links

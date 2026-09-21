@@ -43,6 +43,24 @@ Resolved: _pending your test_
 
 ## Watch items (not blocking, but worth knowing about)
 
+### W-003 — The MongoDB password is still the one that was pasted into chat
+Noticed: 2026-09-21, deploy
+
+What I found: the Atlas connection string, password included, was pasted in plain text into the
+build conversation early in Phase 3. It never reached git — every commit in history was searched,
+zero matches, so the public repo is clean — but it does sit in that conversation's history. That was
+fine while the backend only ran on localhost. Since the deploy, it's the password protecting a
+database reachable from the internet, and it's still in use (tested: it connects). Rotation was
+explicitly deferred by the user on 2026-09-21.
+
+What to do, when you do it: Atlas → Security → Database Access → your user → Edit → Edit Password →
+**Autogenerate** (letters and digits only — `@`, `:` or `/` would break the connection string) →
+Update User. Then the new password goes in **three** places: Atlas (done by that step), your local
+`.env`, and Render's `MONGODB_URI` (Render redeploys itself on save). Miss Render and the live
+sign-in breaks; miss `.env` and only local development breaks. If Atlas Network Access is set to
+`0.0.0.0/0`, this password is the only thing between the internet and the database — which is the
+case for doing it soon.
+
 ### W-002 — Stockfish is GPLv3, and the build doc never mentions licensing
 Noticed: 2026-09-20, Phase 4
 
