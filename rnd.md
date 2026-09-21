@@ -43,6 +43,25 @@ Resolved: _pending your test_
 
 ## Watch items (not blocking, but worth knowing about)
 
+### W-004 — The Tilt headline can rest on a single game
+Noticed: 2026-09-21, while checking the redesigned Tilt page against the user's 100 real games
+
+What I found: the page headlined "Stop after 8 games in a sitting." The bars showed why — game 9 of
+a session has happened exactly **once**, and it was a loss (0%). The break-point rule (D-014) checks
+that the score *stays* 10+ points below game 1 for every later position in a session, but never asks
+how many games each of those positions is based on. So when the last position has a sample of one, a
+single loss is enough to produce the page's main finding. Games 7 and 8 (100%) rest on 2 and 1 games
+respectively, so the rest of the tail is just as thin.
+
+Why it matters: this is the page's headline, stated as an instruction to the user. It's exactly the
+"a number the user can't trust is a number they won't believe" problem the evidence rule exists to
+prevent — the evidence is there (tap the bar, see the one game) but the headline claims more than it
+shows.
+
+What to decide: a minimum number of games per position before it can count towards (or against) a
+break point — e.g. ignore positions with fewer than 5 games — logged as its own decision, since D-014
+set the rule. Not changed yet: it changes what the app claims, not how it looks.
+
 ### W-003 — The MongoDB password is still the one that was pasted into chat
 Noticed: 2026-09-21, deploy
 

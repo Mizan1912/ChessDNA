@@ -1,32 +1,52 @@
 .evidence-list {
   list-style: none;
-  margin: 0.5rem 0 0;
-  padding: 0;
-  max-height: 200px;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem;
+  max-height: 260px;
   overflow-y: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
+  background: rgba(10, 7, 5, 0.3);
+  border: 1px solid rgba(237, 230, 218, 0.05);
 }
 
 .evidence-row {
   display: flex;
-  gap: 1rem;
+  align-items: center;
+  gap: 0.75rem;
   width: 100%;
-  padding: 0.4rem 0.6rem;
-  background: none;
+  padding: 0.55rem 0.6rem;
+  background: transparent;
   border: none;
-  border-radius: 0;
-  border-bottom: 1px solid var(--color-border);
-  color: var(--color-text);
+  border-radius: var(--radius-sm);
   text-align: left;
-  font-size: 0.85rem;
+  font-size: 0.88rem;
 }
 
-.evidence-list li:last-child .evidence-row {
-  border-bottom: none;
+.evidence-opponent {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
 }
 
-.evidence-row:hover {
-  color: var(--color-accent);
-  border-color: var(--color-border);
+.evidence-date {
+  font-size: 0.8rem;
+}
+
+.evidence-chevron {
+  color: var(--color-text-faint);
+  transition: transform var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .evidence-row:hover {
+    background: rgba(255, 244, 225, 0.05);
+  }
+
+  .evidence-row:hover .evidence-chevron {
+    color: var(--color-accent);
+    transform: translateX(2px);
+  }
 }

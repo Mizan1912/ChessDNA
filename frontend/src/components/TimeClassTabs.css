@@ -1,18 +1,75 @@
 .time-class-tabs {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
+  position: relative;
+  display: inline-flex;
+  max-width: 100%;
+  gap: 0.2rem;
+  padding: 0.3rem;
+  margin-bottom: 1.5rem;
+  border-radius: var(--radius-pill);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.time-class-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* The gold pill that slides under the chosen option. */
+.tab-indicator {
+  position: absolute;
+  top: 0.3rem;
+  bottom: 0.3rem;
+  left: 0;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(180deg, rgba(224, 180, 88, 0.26), rgba(201, 154, 60, 0.16));
+  box-shadow: 0 0 0 1px var(--color-accent-line), 0 6px 18px -8px rgba(201, 154, 60, 0.7);
+  transition:
+    transform var(--dur-slow) var(--ease-out),
+    width var(--dur-slow) var(--ease-out);
 }
 
 .time-class-tabs button {
-  background: none;
-  border: 1px solid var(--color-border);
+  position: relative; /* above the indicator */
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  padding: 0.45rem 0.95rem;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.tab-label {
   text-transform: capitalize;
-  font-size: 0.85rem;
-  padding: 0.3rem 0.7rem;
+}
+
+.tab-count {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-faint);
+  transition: color var(--dur-fast) var(--ease-out);
 }
 
 .time-class-tabs button.active {
-  border-color: var(--color-accent);
+  color: var(--color-text);
+}
+
+.time-class-tabs button.active .tab-count {
   color: var(--color-accent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .time-class-tabs button:hover:not(.active) {
+    background: transparent;
+    color: var(--color-text);
+  }
+}
+
+@media (max-width: 899px) {
+  .time-class-tabs {
+    display: flex;
+    margin-bottom: 1.1rem;
+  }
 }

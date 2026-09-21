@@ -1,0 +1,276 @@
+/* Shared by the three findings pages — Tilt, Clock, Blunders (D-051). Each
+   leads with its finding as the page headline, then backs it with cards,
+   each card one claim with its evidence one tap away. */
+
+.findings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.finding-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  min-width: 0;
+}
+
+.finding-card.span-2 {
+  grid-column: 1 / -1;
+}
+
+.finding-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+
+.finding-head .muted {
+  font-size: 0.8rem;
+}
+
+.finding-text {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.finding-foot {
+  margin: 0;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.gold-text {
+  color: var(--color-accent);
+}
+
+.stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem 2rem;
+}
+
+.stat-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-san {
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.see-move {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  color: var(--color-accent);
+  padding: 0.35rem 0.5rem;
+  margin-left: -0.5rem;
+}
+
+/* --- evidence toggles --------------------------------------------------------- */
+
+.evidence-toggle-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.5rem;
+  margin-left: -0.5rem;
+  color: var(--color-accent);
+}
+
+.chevron {
+  transition: transform var(--dur) var(--ease-out);
+}
+
+.chevron.open {
+  transform: rotate(180deg);
+}
+
+/* --- tilt: score bars ------------------------------------------------------------ */
+
+.score-bars {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.score-bar-row {
+  display: grid;
+  grid-template-columns: 5rem 1fr 3.5rem 5rem;
+  align-items: center;
+  gap: 0.9rem;
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  text-align: left;
+}
+
+.score-bar-row.open {
+  background: rgba(255, 244, 225, 0.04);
+  border-color: var(--glass-border);
+}
+
+.score-bar-label {
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.score-bar-track {
+  height: 10px;
+  border-radius: 999px;
+  background: rgba(255, 244, 225, 0.06);
+  overflow: hidden;
+}
+
+.score-bar-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(237, 230, 218, 0.35), rgba(237, 230, 218, 0.55));
+  transform-origin: left;
+  animation: grow var(--dur-slow) var(--ease-out) both;
+}
+
+/* The break point — the gold bar is the finding. */
+.score-bar-row.break-point .score-bar-fill {
+  background: linear-gradient(90deg, #b8862f, #e8c070);
+  box-shadow: 0 0 12px rgba(232, 192, 112, 0.45);
+}
+
+.score-bar-row.break-point .score-bar-label,
+.score-bar-row.break-point .score-bar-value {
+  color: var(--color-accent);
+  font-weight: 600;
+}
+
+.score-bar-value {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-align: right;
+}
+
+.score-bar-sample {
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 1.4rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b8862f, #e8c070);
+}
+
+@keyframes grow {
+  from {
+    transform: scaleX(0);
+  }
+  to {
+    transform: scaleX(1);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .score-bar-row:hover {
+    background: rgba(255, 244, 225, 0.04);
+    border-color: transparent;
+  }
+}
+
+/* --- clock: share of thinking time ------------------------------------------------ */
+
+.share-bar {
+  height: 14px;
+  border-radius: 999px;
+  background: rgba(255, 244, 225, 0.08);
+  overflow: hidden;
+}
+
+.share-opening {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b8862f, #e8c070);
+  box-shadow: 0 0 14px rgba(232, 192, 112, 0.45);
+  transform-origin: left;
+  animation: grow var(--dur-slow) var(--ease-out) both;
+}
+
+.share-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted);
+}
+
+.share-legend strong {
+  color: var(--color-text);
+  margin-left: 0.25rem;
+}
+
+.legend-dot {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  margin-right: 0.35rem;
+  border-radius: 50%;
+  background: rgba(255, 244, 225, 0.2);
+}
+
+.legend-dot.gold {
+  background: var(--color-accent);
+}
+
+/* --- phone ------------------------------------------------------------------------ */
+
+@media (max-width: 899px) {
+  .findings-grid {
+    grid-template-columns: 1fr;
+    gap: 0.85rem;
+  }
+
+  .score-bar-row {
+    grid-template-columns: 4rem 1fr 3rem;
+    gap: 0.6rem;
+  }
+
+  .score-bar-sample {
+    display: none;
+  }
+
+  .finding-head .muted {
+    display: none;
+  }
+}
+
+/* --- tilt: not enough data yet ----------------------------------------------------- */
+
+.progress-card {
+  max-width: 560px;
+}
+
+.stat-of {
+  font-size: 1.2rem;
+  color: var(--color-text-faint);
+}
+
+.progress-cta {
+  align-self: flex-start;
+  padding: 0.65rem 1.3rem;
+}

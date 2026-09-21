@@ -1,27 +1,71 @@
-/* Design tokens — see decision.md D-009 and D-025. Palette drawn from the
-   board itself: wood (background + accent), bone (text). One accent colour,
-   used sparingly, per the build doc's design direction. Dark by default, no
-   light variant — this is a dense tool for people already used to Lichess,
-   not a marketing site that needs to please every visitor's OS setting.
-   Background is a warm espresso/wood tone rather than a neutral blue-black
-   slate, per D-025. */
+/* ==========================================================================
+   Design system — see decision.md D-009, D-025 and D-051.
+
+   Palette drawn from the board itself: espresso wood (background), bone
+   (text), and one gold accent used for what matters. Dark only — a dense
+   tool for people already used to chess sites, not a marketing page.
+
+   D-051 adds depth: frosted "glass" surfaces over a softly lit background,
+   a proper type scale with the serif reserved for emphasis, and a motion
+   system that every page shares (and that switches itself off for anyone
+   whose device asks for reduced motion).
+   ========================================================================== */
+
 :root {
+  /* --- colour ------------------------------------------------------------ */
   --color-bg: #1b140f;
+  --color-bg-deep: #120d09;
   --color-surface: #241b15;
   --color-surface-raised: #2e2219;
   --color-border: #40311f;
   --color-text: #ede6da;
   --color-text-muted: #a89984;
+  --color-text-faint: #7a6d5d;
   --color-accent: #c99a3c;
   --color-accent-hover: #dcae52;
+  --color-accent-soft: rgba(201, 154, 60, 0.14);
+  --color-accent-line: rgba(201, 154, 60, 0.4);
   --color-danger: #c25450;
+  --color-win: #8fbf5a;
+  --color-loss: #d15b55;
+  --color-draw: #a89984;
 
+  /* --- glass ------------------------------------------------------------- */
+  /* Translucent enough to show the lit background through it, opaque enough
+     that text on top never has to fight what's behind. */
+  --glass-bg: rgba(38, 28, 21, 0.58);
+  --glass-bg-strong: rgba(30, 22, 16, 0.82);
+  --glass-border: rgba(237, 230, 218, 0.085);
+  --glass-blur: blur(18px) saturate(140%);
+  --glass-highlight: inset 0 1px 0 rgba(255, 244, 225, 0.05);
+  --shadow-card: 0 18px 40px -18px rgba(0, 0, 0, 0.7);
+  --shadow-glow: 0 0 0 1px var(--color-accent-line), 0 10px 28px -10px rgba(201, 154, 60, 0.45);
+
+  /* --- type -------------------------------------------------------------- */
   --font-heading: "Fraunces", Georgia, serif;
   --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Consolas, monospace;
 
-  --radius-sm: 3px;
-  --radius-md: 6px;
+  /* --- shape ------------------------------------------------------------- */
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --radius-pill: 999px;
+
+  /* --- motion ------------------------------------------------------------ */
+  /* One easing curve for almost everything: fast start, soft landing. It's
+     what makes motion feel intentional rather than mechanical. */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-spring: cubic-bezier(0.34, 1.4, 0.64, 1);
+  --dur-fast: 150ms;
+  --dur: 240ms;
+  --dur-slow: 480ms;
+
+  /* --- layout ------------------------------------------------------------ */
+  --rail-width: 88px;
+  --topbar-height: 56px;
+  --tabbar-height: 64px;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
 
   color-scheme: dark;
 }
@@ -30,9 +74,14 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-tap-highlight-color: transparent;
+}
+
 body {
   margin: 0;
-  background: var(--color-bg);
+  min-height: 100vh;
+  background: var(--color-bg-deep);
   color: var(--color-text);
   font-family: var(--font-body);
   font-size: 15px;
@@ -41,6 +90,26 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* The lit room behind the glass. Glass over a flat colour just looks grey;
+   it needs light and shade behind it to have anything to frost. Two warm
+   glows and a vignette, on a fixed layer so they don't scroll or repaint.
+   (A fixed pseudo-element rather than `background-attachment: fixed`,
+   which stutters on phones.) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60vmax 45vmax at 85% -10%, rgba(201, 154, 60, 0.16), transparent 60%),
+    radial-gradient(55vmax 50vmax at -10% 105%, rgba(150, 70, 40, 0.18), transparent 60%),
+    radial-gradient(40vmax 30vmax at 50% 50%, rgba(60, 40, 25, 0.35), transparent 70%),
+    linear-gradient(180deg, #1d1510 0%, #140f0b 100%);
+}
+
+/* --- type scale ------------------------------------------------------------ */
+
 h1,
 h2,
 h3 {
@@ -48,31 +117,172 @@ h3 {
   font-weight: 600;
   margin: 0;
   color: var(--color-text);
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+}
+
+h2 {
+  font-size: 1.35rem;
+}
+
+h3 {
+  font-size: 1.05rem;
+}
+
+/* The one word in a headline that carries the meaning: gold, italic serif.
+   Used once per screen at most, or it stops meaning anything. */
+.accent-em {
+  font-family: var(--font-heading);
+  font-style: italic;
+  font-weight: 600;
+  color: var(--color-accent);
+}
+
+/* Small caps label above a title or a stat — "YOUR PROGRESS". */
+.eyebrow {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--color-text-muted);
+}
+
+/* The headline number of a card — accuracy, a rating, a count. Serif, large,
+   because it's the thing you came to read. */
+.stat-value {
+  font-family: var(--font-heading);
+  font-size: 2.1rem;
+  font-weight: 600;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+.stat-value.gold {
+  color: var(--color-accent);
+}
+
+.muted {
+  color: var(--color-text-muted);
 }
 
 a {
   color: var(--color-accent);
+  text-decoration-color: var(--color-accent-line);
+  text-underline-offset: 3px;
 }
+
+/* --- surfaces ------------------------------------------------------------- */
+
+.glass {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-card), var(--glass-highlight);
+}
+
+.card {
+  background: var(--glass-bg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--shadow-card), var(--glass-highlight);
+  border-radius: var(--radius-lg);
+  padding: 1.1rem 1.25rem;
+}
+
+/* --- buttons -------------------------------------------------------------- */
+/* Default button: quiet glass. `.btn-primary`: the gold one — at most one per
+   screen, for the thing you most likely want to do next. */
 
 button {
   font-family: var(--font-body);
   font-size: inherit;
-  background: var(--color-surface-raised);
+  font-weight: 500;
   color: var(--color-text);
-  border: 1px solid var(--color-border);
+  background: rgba(255, 244, 225, 0.04);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
-  padding: 0.4rem 0.75rem;
+  padding: 0.5rem 0.9rem;
   cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    transform var(--dur-fast) var(--ease-out),
+    box-shadow var(--dur) var(--ease-out);
 }
 
-button:hover:not(:disabled) {
-  border-color: var(--color-accent);
+/* Pressed feels pressed — on touch this is the only feedback there is, so it
+   isn't tied to hover. */
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }
 
 button:disabled {
-  opacity: 0.4;
+  opacity: 0.38;
   cursor: default;
 }
+
+.btn-primary {
+  color: #1b140f;
+  font-weight: 600;
+  background: linear-gradient(180deg, #e0b458 0%, #c99a3c 100%);
+  border-color: transparent;
+  box-shadow: 0 8px 22px -10px rgba(201, 154, 60, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+.btn-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--color-text-muted);
+}
+
+.btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border-radius: var(--radius-pill);
+}
+
+/* Hover only where hover exists. On a phone a "hover" state sticks to
+   whatever you last tapped, which just looks broken — so every hover style
+   in the app lives inside this query (or its own copy of it). */
+@media (hover: hover) and (pointer: fine) {
+  button:hover:not(:disabled) {
+    background: rgba(255, 244, 225, 0.08);
+    border-color: rgba(237, 230, 218, 0.16);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background: linear-gradient(180deg, #e8c070 0%, #d4a648 100%);
+    box-shadow: 0 12px 28px -10px rgba(201, 154, 60, 0.85), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+
+  .btn-ghost:hover:not(:disabled) {
+    background: rgba(255, 244, 225, 0.05);
+    border-color: transparent;
+    color: var(--color-text);
+  }
+
+  a:hover {
+    color: var(--color-accent-hover);
+  }
+}
+
+/* --- inputs --------------------------------------------------------------- */
 
 input[type="text"],
 input[type="range"] {
@@ -80,14 +290,36 @@ input[type="range"] {
 }
 
 input[type="text"] {
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  width: 100%;
+  background: rgba(10, 7, 5, 0.45);
+  border: 1px solid var(--glass-border);
   border-radius: var(--radius-sm);
   color: var(--color-text);
-  padding: 0.4rem 0.6rem;
+  padding: 0.65rem 0.85rem;
   font-family: var(--font-body);
-  font-size: inherit;
+  /* 16px, not 15: iOS zooms the whole page into any input smaller than
+     that the moment you tap it. */
+  font-size: 16px;
+  transition: border-color var(--dur-fast) var(--ease-out), box-shadow var(--dur) var(--ease-out);
 }
+
+input[type="text"]::placeholder {
+  color: var(--color-text-faint);
+}
+
+input[type="text"]:focus {
+  outline: none;
+  border-color: var(--color-accent-line);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+}
+
+label {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-muted);
+}
+
+/* --- tables --------------------------------------------------------------- */
 
 table {
   border-collapse: collapse;
@@ -97,20 +329,67 @@ table {
 th,
 td {
   text-align: left;
-  padding: 0.5rem 0.75rem;
-  border-bottom: 1px solid var(--color-border);
+  padding: 0.65rem 0.9rem;
+  border-bottom: 1px solid rgba(237, 230, 218, 0.06);
 }
 
 th {
   color: var(--color-text-muted);
-  font-weight: 500;
-  font-size: 0.8rem;
+  font-weight: 600;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.1em;
 }
 
-/* Which colour the player had in a game — shared by the games list and the
-   viewer, so it's defined once here rather than duplicated per page. */
+tbody tr {
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  tbody tr[role="button"]:hover,
+  tbody tr.clickable:hover {
+    background: rgba(255, 244, 225, 0.045);
+    cursor: pointer;
+  }
+}
+
+/* --- pills ---------------------------------------------------------------- */
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1.5;
+  background: rgba(255, 244, 225, 0.06);
+  color: var(--color-text-muted);
+  text-transform: capitalize;
+  white-space: nowrap;
+}
+
+.pill-win {
+  background: rgba(143, 191, 90, 0.14);
+  color: var(--color-win);
+}
+
+.pill-loss {
+  background: rgba(209, 91, 85, 0.14);
+  color: var(--color-loss);
+}
+
+.pill-draw {
+  background: rgba(168, 153, 132, 0.14);
+  color: var(--color-draw);
+}
+
+/* Which colour the player had in a game. */
 .color-dot {
   display: inline-block;
   width: 0.7em;
@@ -118,6 +397,7 @@ th {
   border-radius: 50%;
   border: 1px solid var(--color-border);
   margin-right: 0.3em;
+  flex-shrink: 0;
 }
 
 .color-dot.white {
@@ -127,7 +407,66 @@ th {
 .color-dot.black {
   background: #1a1a1a;
   /* A near-black dot needs a visible ring against this near-black
-     background, or it just disappears — the default border colour is too
-     close to the page background to read as a circle at all. */
+     background, or it just disappears. */
   border-color: var(--color-text-muted);
+}
+
+.error-message {
+  color: #e7837e;
+}
+
+/* --- motion ---------------------------------------------------------------- */
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Every screen arrives the same way: a short fade and rise. Keyed on the
+   screen in App.jsx so it replays on each navigation.
+
+   Fill mode is "backwards", never "both". "both" holds the LAST frame after
+   the animation ends — and the last frame is `transform: none`, which the
+   browser keeps as an identity transform. That invisible transform silently
+   broke everything inside the page: `position: fixed` became relative to
+   the page instead of the screen, and frosted-glass blur stopped working
+   (text showed through the phone viewer's header). "backwards" holds only the
+   FIRST frame, during the delay, and leaves nothing behind. See D-051. */
+.page-enter {
+  animation: rise var(--dur-slow) var(--ease-out) backwards;
+}
+
+/* Lists cascade in. Each item sets --i (its index, capped) so the delay
+   grows down the list; capped so a 100-row list doesn't take 3 seconds. */
+.stagger > * {
+  animation: rise var(--dur-slow) var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 28ms);
+}
+
+/* Respect the device setting. Everything still works — it just arrives
+   without moving. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

@@ -534,6 +534,48 @@ or under the blunder line. Scanning the same 50 games in two different orders ga
 way and 120 the other. Now the engine is told "new game" before each one and starts with a clean
 memory: same games, same answer, in any order, for about half a second of extra time per 50 games.
 
+## 4m. How the look and feel is put together
+
+**Files involved:** `index.css`, `App.jsx` + `App.css`, `components/Icon.jsx`,
+`hooks/useMediaQuery.js`, and each page's own stylesheet
+
+**One design system, every page inherits it.** `index.css` defines the colours, the frosted "glass"
+surface, the type sizes, the button styles and the animations once, as named values. A page never
+invents its own gold or its own blur; it uses the shared one. That's what makes eight screens feel
+like one app, and it means changing the gold once changes it everywhere.
+
+**Glass needs something behind it.** Frosted glass is a translucent panel that blurs whatever is
+behind it. Over a flat brown background there's nothing to blur, so it just looks grey. So the page
+has a fixed layer of soft warm light behind everything, and the panels frost *that*.
+
+**Phones and laptops get different frames, from the same pages.** A single breakpoint (900px wide)
+decides the frame: above it, the icon rail on the left; below it, a top bar and a tab bar at the
+bottom, where your thumb already is. Most of that is plain CSS. A few things can't be left to CSS —
+the Google sign-in button is a widget Google draws itself, and it must exist in exactly one place, not
+drawn twice with one copy hidden — so `useMediaQuery` lets the code ask "is this a phone?" directly.
+
+**Nothing depends on hover on a touch screen.** A phone can't hover, and worse, it "sticks" a hover
+style onto whatever you last tapped. So every hover effect is wrapped in a check for "can this device
+actually hover?", and anything that only ever appeared on hover (the preview board on the games list)
+simply isn't shown on a phone.
+
+**Why the move list doesn't drag the page any more.** The old code asked the browser to "scroll this
+move into view", and the browser obliged by scrolling *everything* that could scroll — the list and
+the whole page. On a phone that shoved the board off the top of the screen. The new code works out how
+far the current move is from the edge of its list and scrolls only the list, by that much.
+
+**The back button.** There's no router yet, so each time you change screen the app writes a small
+note into the browser's history ("now on Blunders", "now in a game"). When you press back, the browser
+hands that note back and the app puts the right screen up. The back arrow inside a game does the same
+thing as the phone's back gesture, so the two can never disagree.
+
+**Motion, and the one way it went wrong.** Every screen arrives with a short fade-and-rise. The first
+version told the browser to *keep* the animation's last frame afterwards, and that last frame left an
+invisible "transform" on the whole page. It moved nothing, but a transform changes the rules for
+everything inside it: things pinned to the screen got pinned to the page instead, and the frosted
+header stopped frosting. Now the animation keeps nothing once it's done. And anyone whose phone is set
+to reduce motion gets every screen without the movement.
+
 ## 5. Showing evidence for a finding
 
 **Files involved:** `components/GameEvidenceList.jsx`

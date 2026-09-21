@@ -1,85 +1,143 @@
-.blunders-page h2 {
-  margin: 1rem 0 0.5rem;
-  font-size: 1.4rem;
+/* --- before and during a scan ------------------------------------------------------ */
+
+.scan-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1rem;
 }
 
-.blunders-lead {
-  margin: 0.75rem 0 1.25rem;
-  max-width: 620px;
-  line-height: 1.5;
+.scan-card p {
+  margin: 0.25rem 0 0;
 }
 
-.scan-progress {
-  margin-top: 1.25rem;
-  max-width: 480px;
+.scan-icon {
+  display: grid;
+  place-items: center;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 50%;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  box-shadow: 0 0 0 1px var(--color-accent-line);
 }
 
-.progress-track {
-  margin-top: 0.6rem;
-  height: 6px;
-  background: var(--color-surface-raised);
-  border-radius: 3px;
-  overflow: hidden;
+.scan-button {
+  padding: 0.7rem 1.5rem;
 }
 
-.progress-fill {
-  height: 100%;
-  background: var(--color-accent);
-  transition: width 200ms;
+.scan-card.scanning {
+  grid-template-columns: 1fr;
+  gap: 0.85rem;
 }
+
+.scan-progress-copy p {
+  margin: 0.3rem 0 0;
+}
+
+/* --- the results -------------------------------------------------------------- */
 
 .blunders-table-wrapper {
-  margin-top: 1rem;
-  max-height: 480px;
-  overflow: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  padding: 0.25rem;
+  overflow-x: auto;
 }
 
-.blunders-table thead th {
-  position: sticky;
-  top: 0;
-  background: var(--color-bg);
-  white-space: nowrap;
+.blunders-table .mono {
+  font-family: var(--font-mono);
 }
 
-.blunders-table tbody tr {
-  cursor: pointer;
+.blunders-table .strong {
+  font-weight: 600;
 }
 
-.blunders-table tbody tr:hover {
-  background: var(--color-surface);
-}
-
-.blunders-table tbody tr:hover td {
-  color: var(--color-accent);
-}
-
-.why-cell {
-  white-space: nowrap;
+.best-cell {
+  color: var(--color-win);
 }
 
 .lost-cell {
-  color: var(--color-danger);
+  font-weight: 600;
+  color: var(--color-loss);
+  white-space: nowrap;
 }
 
-.blunders-table tbody tr:hover .lost-cell {
-  color: var(--color-accent);
-}
-
-/* Feature 1 pattern tags (Phase 5). Quiet outlined chips rather than filled
-   ones: the "Why" column is the sentence you read; these are the labels
-   that get counted, and several can sit side by side in one cell. */
+/* Feature 1 pattern tags (Phase 5). Outlined chips: the "Why" column is the
+   sentence you read; these are the labels that get counted, and several can
+   sit side by side. */
 .pattern-cell {
   white-space: nowrap;
 }
 
 .pattern-chip {
   display: inline-block;
-  padding: 0.1rem 0.45rem;
+  padding: 0.12rem 0.55rem;
   margin-right: 0.3rem;
-  border: 1px solid var(--color-border);
+  border: 1px solid var(--color-accent-line);
   border-radius: 999px;
-  font-size: 0.75rem;
-  color: var(--color-text);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  white-space: nowrap;
+}
+
+/* Phone: one card per blunder. */
+.blunder-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.blunder-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  width: 100%;
+  padding: 0.85rem 0.95rem;
+  text-align: left;
+  border-radius: var(--radius-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  box-shadow: var(--glass-highlight);
+}
+
+.blunder-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.blunder-move {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 600;
+}
+
+.blunder-why {
+  font-weight: 500;
+}
+
+.blunder-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+}
+
+.blunder-date {
+  margin-left: auto;
+}
+
+@media (max-width: 899px) {
+  .scan-card {
+    grid-template-columns: auto 1fr;
+  }
+
+  .scan-button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
 }

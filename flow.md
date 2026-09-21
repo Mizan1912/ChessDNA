@@ -6,81 +6,63 @@ researched.
 
 ## 1. User journey
 
-1. **Games list (`/`)** — a sticky header ("Chess DNA"). Once games are fetched, time-class tabs
-   (All / Bullet / Blitz / Rapid / Daily, each with a count) appear right below the header — this
-   selection is shared app-wide, not just a table filter (see point 3). Below that, a slim toolbar
-   with a Chess.com username field, a slider (1-100, step 1) for how many recent games to fetch,
-   and a "Fetch games" button. Beside the toolbar and table sits a chess board: the starting
-   position when idle, and the hovered game's final position when hovering a row. The table itself
-   is a fixed-height scrolling box (not the whole page growing taller): date, opponent, result,
-   time control — showing only games matching the active time-class tab. An unknown username or a
-   network problem shows an inline error instead.
-2. **Game viewer / analysis board** — clicking any row in the table switches to a board, oriented to
-   the user's own colour, with an **evaluation bar** beside it (under it, on a phone) showing who's
-   winning and by how much. The bar updates live as you step through the game. You can also **drag
-   pieces to play your own moves** from any position — doing so branches into "exploring your own
-   line", with the bar following along, and a button to drop back into the real game. The **review
-   starts automatically** on opening a game: an engine pass labelling every move — Brilliant, Great,
-   Best, Excellent, Good, Inaccuracy, Mistake, Miss, Blunder — in the move list, with the current
-   move's verdict spelled out under the board ("Be3 is Good · best was d5") and drawn on the board
-   itself as a medal on the square the piece landed on. A scorecard beside the moves counts every
-   label for both players, with accuracy and a per-game rating estimate. Both players' clocks sit
-   above and below the board. Labels appear one at a time as
-   they're worked out rather than all at the end, and a game is only ever analysed once — finished
-   reviews are saved in the browser, so reopening one shows everything in about a second instead of
-   re-analysing for half a minute. Every move also shows its thinking time (e.g.
-   "c5 9.7s") when the game has clock data. Opens at the starting position by default — except when opened from a clock
-   finding, which jumps straight to the exact position that finding is about. Prev/next/start/end
-   buttons and a flip-board button step through the game; clicking any move in the list jumps
-   straight to it. A link at the top goes back to the real game on Chess.com. "Back to list" returns
-   to whichever screen opened the viewer.
-3. **Tilt findings** — appears via the header nav once games are fetched. The same time-class tabs
-   from point 1 stay visible and apply here too — switching to "Bullet" re-runs the whole analysis
-   on just your bullet games. Shows:
-   a one-line "stop after N games" instruction (or "no clear break point yet"), a table of score by
-   position-in-session with the break point highlighted, an "after a loss" comparison (overall vs.
-   right after any loss vs. right after a loss on time specifically), and a worst-hour-of-day
-   finding. Below 20 sessions of 2+ games, shows "not enough games yet" instead of any number.
-   Every finding has a "show the N games..." toggle that reveals the real games behind it
-   (date/opponent/result), each clickable straight into the board viewer — the evidence rule.
-4. **Clock** — appears via the header nav. Shows: opening time share (% of total thinking time
-   spent in the first 12 moves), the single longest think found, a count of games lost on time (with
-   an evidence list), and a "known position, wasted time" finding — a position reached 20+ times
-   (not counting the universal game-start position) where a standout slow think still happened. The
-   longest-think and known-position findings both have a "see that position" link that opens the
-   viewer sitting on that exact position, not just the start of the game. If none of the fetched
-   games have clock data in their PGN, says so plainly instead of showing zeros.
+**The frame (D-051).** On a laptop, a frosted-glass icon rail on the left: Games, Tilt, Clock,
+Blunders, with the current screen lit in gold, and your account at the bottom (Google's round
+sign-in button, or your initial, which opens a menu with Sign out). On a phone, a slim top bar
+(logo + account) and a **tab bar along the bottom**, within thumb reach. You always see where you
+are. Every screen fades and rises in; lists cascade. The browser's own **back button / phone back
+gesture** works throughout — back from a game returns to the screen you opened it from, instead of
+leaving the site. Nothing relies on hover on a touch screen. Before any games are loaded, Tilt,
+Clock and Blunders each show a short "fetch your games first" card with a button to the Games screen.
 
-4a. **Blunders** — appears via the header nav. Unlike every other page, this one doesn't compute
-   anything until you ask: running Stockfish over a batch of games takes minutes, so it opens with
-   a "Scan N games" button and a rough time estimate. During the scan it shows a progress bar
-   ("analysing game 7 of 50 — 12 blunders so far") and the tab stays fully usable, because the
-   engine runs in a Web Worker rather than on the main thread. When it finishes: a table of every
-   moment you threw the game away — move number, what you played, **why it was bad** ("Loses
-   material", "Allows mate", "Hangs a piece"), which **pattern** it fits (Phase 5's blind-spot
-   tags — so far "Hanging piece" and "Back rank", several can apply at once), what the engine wanted
-   instead, how much win chance it cost, and how long you spent on it. The same games always give
-   the same results, whatever order they're scanned in. Clicking any row opens that exact move on the board with
-   the full reason written out above it ("Qd4 loses your queen on d4 to Bxd4. The engine wanted
-   Nf3."), and the move list scrolls itself to that move. Results stay put while you click through
-   them — looking at one and coming back doesn't throw the scan away.
-
-The header nav (Games list / Tilt findings / Clock / Blunders) shows buttons for whichever views
-you're *not* currently on. No routing library is in use yet — the app is four screens toggled by local state in
-`App.jsx`. `react-router` (locked in the tech stack) will be introduced once there are enough
-screens that back/forward browser navigation and shareable URLs actually matter.
-
-5. **Onboarding (first screen, first-time visitors only)** — before you've either signed in or
-   picked a guest username, you see a dedicated screen: "Sign in with Google" (saves your username
-   permanently) or type a Chess.com username and "Continue as guest" (nothing saved, asked again
-   next visit). If you're signed in but haven't saved a username yet (fresh account, or a new
-   device), it skips straight to just asking for the username, greeting you by name. Once you have a
-   saved username, this screen never shows again — you land straight in the app with your games
-   already loading.
-6. **Signing in later** — the header still shows "Sign in with Google" (if you started as a guest)
-   or your name plus "Sign out" (once signed in) even after onboarding. Signing in doesn't gate
-   anything — the app works exactly the same as a guest. If you'd already typed a username as a
-   guest before signing in, it's carried over to your new account instead of being lost.
+1. **Onboarding (first-time visitors only)** — "Find out how you *specifically* lose." beside a board
+   quietly playing through an opening. A glass card offers "Sign in with Google" (saves your username
+   for good) or a username field and "Continue as guest" (asked again next visit). Signed in but no
+   saved username yet: just the username step, greeting you by name. With a saved username you
+   never see this screen again — you land in the app with your games already loading.
+2. **Games** — the headline, then a glass card: Chess.com username, a gold slider for how many games
+   (1-100, step 1), and a gold "Fetch games" button (placeholder rows shimmer while loading). Under
+   it, the **time-control filter** (All / Bullet / Blitz / Rapid / Daily, each with a count, a gold
+   pill sliding under the chosen one) — shared by every screen, so switching to Bullet re-runs every
+   analysis on just your bullet games. Then three stat cards from the games on screen: your record
+   (W–L–D), your score %, and your rating in the time control you play most, with its change and a
+   sparkline. Then the games: on a laptop, a table (result pill, opponent + rating, your colour, time
+   control, date) with a "how it ended" board beside it that shows a game's final position when you
+   hover its row; on a phone, one card per game (a W/L/D badge, opponent + rating, time control,
+   date) and no hover board, since there's nothing to hover with. Tap or click a game to open it.
+3. **Game viewer** — a header with back, "vs Opponent" + their rating, the date and time control, a
+   result pill, and a link to the game on Chess.com. The board (opponent's strip and clock above, yours
+   below, whoever is to move lit; the evaluation bar beside it, or under it on a phone). The **review
+   starts by itself**: every move gets a label (Brilliant … Blunder), labels arrive one by one, and a
+   reviewed game reopens instantly from the browser's cache. The current move's verdict reads as a
+   sentence with the label word emphasised in its colour ("O-O-O **is good** · best was **a3**"), with
+   the same medal drawn on the board on the square the piece landed on, both of the move's squares lit,
+   and a green arrow to the better move when there was one. Accuracy for both players is the headline
+   number once the review finishes. **Laptop:** a glass panel beside the board — status/accuracy, the
+   verdict, then **Moves / Review** tabs (Moves: one row per move number with verdict glyphs and
+   thinking times; Review: the scorecard of every label for both players, plus the per-game rating
+   estimate), with the controls at the bottom and **←/→/Home/End** on the keyboard (F flips). **Phone:**
+   a sticky slim header, a full-width board, a sideways moves strip that keeps the current move
+   centred, the verdict, then accuracy and the scorecard; the five controls (first, back, **next** in
+   gold, last, flip) are pinned to the bottom of the screen. Stepping through moves never scrolls the
+   page — only the moves list moves. Drag any piece to explore your own line; one tap returns to the
+   game. Opened from a finding, the viewer arrives on the exact move, with the reason as a gold callout.
+4. **Tilt** — the headline IS the finding: "Stop after **8 games** in a sitting" (or "No clear break
+   point yet"). Score by game-in-session as **bars**, the break point in gold; tap a bar for the games
+   behind it. Cards for "after a loss" (overall vs. next game after a loss vs. after losing on time)
+   and time of day (worst hour and your score then), each with a toggle listing its real games. Below
+   20 sessions: "Not enough sessions yet", a meter showing how close you are (e.g. 8 / 20) and a
+   "Fetch more games" button.
+5. **Clock** — headline: "You spend **25%** of your thinking time in the first 12 moves", drawn as a
+   bar. Cards for the longest think (e.g. 11m 14s on move 30), games lost on time (with the list),
+   and a known position where you still spent a long time — each with "See that move". Durations read
+   as a person says them ("11m 14s", never "674s"). No clock data: says so plainly.
+6. **Blunders** — computes nothing until asked: a card with "Scan N games" and a time estimate, then a
+   gold progress bar ("Game 7 of 50 · 12 blunders so far") while the engine works in the background.
+   Headline once done: "**115** moments you threw it away." Laptop: a table — move, played, why,
+   **pattern** (Phase 5 tags, e.g. "Hanging piece"), best move, win chance lost, time spent, date.
+   Phone: one card per blunder. The same games always give the same results whatever order they're
+   scanned in; results survive opening one and coming back.
 
 ## 1a. What's saved, and where
 
@@ -126,12 +108,18 @@ Phase 4.
 | --- | --- |
 | `/frontend` | React + Vite app, plain JavaScript. All browser-side code lives here. |
 | `/frontend/src/main.jsx` | Vite/React entry point. |
-| `/frontend/src/App.jsx` + `App.css` | App shell: sticky header, toggles between the games list, viewer, and Tilt page. |
-| `/frontend/src/index.css` | Global design tokens (colours, fonts) and base element styles. |
+| `/frontend/src/App.jsx` + `App.css` | App shell (D-051): the glass icon rail on laptops, top bar + bottom tab bar on phones, the account menu, back-button support, and which screen is showing. |
+| `/frontend/src/index.css` | The design system (D-051): colours, glass surfaces, type scale, buttons, pills, and the shared motion (page arrival, list cascade, reduced-motion off-switch). |
 | `/frontend/src/hooks/useFetchedGames.js` | Owns the "fetch from Chess.com" state so the list and Tilt pages share one result set. |
 | `/frontend/src/pages/GamesListPage.jsx` + `.css` | Username form, games-to-fetch slider, results table (now a presentational component fed by the hook). |
 | `/frontend/src/pages/GameViewerPage.jsx` + `.css` | Board + move list for one game, step controls, flip board. |
-| `/frontend/src/pages/TiltPage.jsx` + `.css` | Feature 2: break point, tilt chain, worst hour — each with an evidence toggle. |
+| `/frontend/src/pages/TiltPage.jsx` | Feature 2: break point (as bars), tilt chain, worst hour — each with an evidence toggle; a progress meter when there isn't enough data yet. |
+| `/frontend/src/pages/FindingsPage.css` | Shared styling for the three findings pages (Tilt, Clock, Blunders): finding cards, stat blocks, bars. |
+| `/frontend/src/components/Icon.jsx` | The app's own icon set (nav, board controls, general) and the gold helix logo — inline SVG, no icon library. |
+| `/frontend/src/components/EmptyState.jsx` + `.css` | What a screen shows before it has anything to show, always with the way forward. |
+| `/frontend/src/hooks/useMediaQuery.js` | Phone vs laptop, and whether the device can hover at all — for the few layout choices CSS can't make alone. |
+| `/frontend/src/lib/gameStats.js` | The Games screen's record, score and rating trend (the rating follows one time control, never a blend). |
+| `/frontend/src/lib/format.js` | How durations read everywhere: "11m 14s", never "674s". |
 | `/frontend/src/components/GameEvidenceList.jsx` + `.css` | Shared clickable game list used to satisfy the evidence rule; reusable by later features. |
 | `/frontend/src/lib/chessComApi.js` | Fetches archives/games from the Chess.com public API. |
 | `/frontend/src/lib/normalizeGame.js` | Converts a raw Chess.com game into the platform-agnostic internal shape (now includes `resultReason`). |
@@ -141,7 +129,7 @@ Phase 4.
 | `/frontend/src/lib/timeClass.js` | Time-class tab counts and filtering — shared by every page via the hook. |
 | `/frontend/src/lib/clockData.js` | Extracts per-move thinking time from a PGN's `%clk` comments (plus increment from the TimeControl header). |
 | `/frontend/src/lib/clockFingerprint.js` | Opening time share, longest think, games lost on time, known-position wasted time. |
-| `/frontend/src/pages/ClockPage.jsx` + `.css` | Feature 3 (partial — see D-020): the four clock findings above, evidence-linked. |
+| `/frontend/src/pages/ClockPage.jsx` | Feature 3 (partial — see D-020): the four clock findings above, evidence-linked. |
 | `/frontend/src/components/TimeClassTabs.jsx` + `.css` | Shared bullet/blitz/rapid/daily filter, rendered once in `App.jsx`, applies to every page. |
 | `/frontend/src/components/GoogleSignInButton.jsx` | Wraps Google Identity Services' own button; calls back with the credential to send to `/server`. |
 | `/frontend/src/hooks/useAuth.js` | Who's signed in — checks for an existing session on load, exposes `signIn`/`signOut`/`updateChessComUsername`. |

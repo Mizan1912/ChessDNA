@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Chess } from "chess.js";
 import { Chessboard } from "react-chessboard";
 import { pgnToMoves, STARTING_FEN } from "../lib/pgnToMoves";
@@ -8,21 +9,180 @@ import EvalBar from "../components/EvalBar";
 import PlayerStrip from "../components/PlayerStrip";
 import ReviewSummary from "../components/ReviewSummary";
 import MoveBadge from "../components/MoveBadge";
+import Icon from "../components/Icon";
+import { formatDuration } from "../lib/format";
 import { useLiveEval } from "../hooks/useLiveEval";
 import { useGameReview } from "../hooks/useGameReview";
+import { useMediaQuery, MOBILE_QUERY } from "../hooks/useMediaQuery";
 import "./GameViewerPage.css";
 
-function formatSeconds(seconds) {
-  if (seconds === null) return null;
-  return seconds < 10 ? `${seconds.toFixed(1)}s` : `${Math.round(seconds)}s`;
+function formatDate(timestampMs) {
+  return new Date(timestampMs).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
 }
 
 const otherColour = (colour) => (colour === "black" ? "white" : "black");
-const accuracyFor = (colour, accuracy) => accuracy?.[colour] ?? "—";
 
 // "best was Nf3" is noise when you already played it, and for theory moves
 // there is nothing to improve on.
 const NO_BEST_MOVE_HINT = new Set(["best", "brilliant", "great", "book"]);
+
+// How each verdict reads in a sentence — "Nd6 is a blunder", not "Nd6 is
+// Blunder". The label word itself is what gets the emphasis.
+const VERDICT_PHRASE = {
+  brilliant: ["is", "brilliant"],
+  great: ["is a", "great move"],
+  book: ["is a", "book move"],
+  best: ["is the", "best move"],
+  excellent: ["is", "excellent"],
+  good: ["is", "good"],
+  inaccuracy: ["is an", "inaccuracy"],
+  mistake: ["is a", "mistake"],
+  miss: ["is a", "miss"],
+  blunder: ["is a", "blunder"],
+};
+
+const prefersReducedMotion = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// Brings the current move into view INSIDE its own list — and only there.
+// The previous version used scrollIntoView(), which scrolls every scrollable
+// container up the chain, the page included: on a phone, six taps of "next"
+// dragged the whole page 496px and pushed the board off the top of the
+// screen. This only ever moves the list's own scroll position.
+function scrollWithin(container, element, axis) {
+  if (!container || !element) return;
+  const box = container.getBoundingClientRect();
+  const item = element.getBoundingClientRect();
+  const behavior = prefersReducedMotion() ? "auto" : "smooth";
+
+  if (axis === "x") {
+    // The phone strip keeps the current move centred, like a ticker.
+    const left = container.scrollLeft + (item.left - box.left) - (box.width - item.width) / 2;
+    container.scrollTo({ left, behavior });
+    return;
+  }
+  // The laptop list only moves when the current move has left the visible
+  // area — a list that re-centres on every step is tiring to read.
+  const margin = 8;
+  if (item.top < box.top + margin) {
+    container.scrollTo({ top: container.scrollTop + (item.top - box.top) - margin, behavior });
+  } else if (item.bottom > box.bottom - margin) {
+    container.scrollTo({ top: container.scrollTop + (item.bottom - box.bottom) + margin, behavior });
+  }
+}
+
+// The small label glyph beside a move in the list, in its label colour.
+function LabelGlyph({ labelled }) {
+  if (!labelled) return null;
+  const meta = LABELS[labelled.label];
+  return (
+    <span className={`move-label ${meta.className}`} title={meta.name}>
+      {meta.glyph}
+    </span>
+  );
+}
+
+// Laptop: the chess-site standard — one row per move number, White's move
+// then Black's, each with its verdict and how long it took.
+function MoveTable({ moves, clockMoves, labelsByPly, activeIndex, onSelect, listRef }) {
+  const rows = [];
+  for (let i = 0; i < moves.length; i += 2) rows.push({ number: moves[i].moveNumber, white: i, black: i + 1 });
+
+  const cell = (ply) => {
+    if (ply >= moves.length) return <span className="move-cell empty" />;
+    const time = formatDuration(clockMoves[ply]?.timeSpentSeconds ?? null);
+    return (
+      <button
+        className={`move-cell${ply === activeIndex ? " active" : ""}`}
+        data-ply={ply}
+        onClick={() => onSelect(ply)}
+      >
+        <span className="move-san">{moves[ply].san}</span>
+        <LabelGlyph labelled={labelsByPly.get(ply)} />
+        {time && <span className="move-time">{time}</span>}
+      </button>
+    );
+  };
+
+  return (
+    <div className="move-table" ref={listRef}>
+      {rows.map((row) => (
+        <div className="move-row" key={row.number}>
+          <span className="move-number">{row.number}.</span>
+          {cell(row.white)}
+          {cell(row.black)}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Phone: one sideways-scrolling line of moves under the board, the current
+// one kept centred. Takes one row of height instead of half the screen.
+function MoveStrip({ moves, labelsByPly, activeIndex, onSelect, listRef }) {
+  return (
+    <div className="move-strip" ref={listRef}>
+      {moves.map((move, ply) => (
+        <button
+          key={ply}
+          className={`strip-move${ply === activeIndex ? " active" : ""}`}
+          data-ply={ply}
+          onClick={() => onSelect(ply)}
+        >
+          {move.color === "w" && <span className="strip-number">{move.moveNumber}.</span>}
+          {move.san}
+          <LabelGlyph labelled={labelsByPly.get(ply)} />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// The five board controls. On a phone they live in a bar pinned to the
+// bottom of the screen, under the thumb; on a laptop, at the foot of the
+// moves panel (and on the arrow keys).
+function BoardControls({ atStart, atEnd, onFirst, onPrev, onNext, onLast, onFlip, className }) {
+  return (
+    <nav className={`board-controls ${className}`} aria-label="Move through the game">
+      <button className="btn-icon" data-nav="first" onClick={onFirst} disabled={atStart} aria-label="First move">
+        <Icon name="first" size={22} />
+      </button>
+      <button className="btn-icon" data-nav="prev" onClick={onPrev} disabled={atStart} aria-label="Previous move">
+        <Icon name="prev" size={24} />
+      </button>
+      <button className="btn-icon btn-step" data-nav="next" onClick={onNext} disabled={atEnd} aria-label="Next move">
+        <Icon name="next" size={24} />
+      </button>
+      <button className="btn-icon" data-nav="last" onClick={onLast} disabled={atEnd} aria-label="Last move">
+        <Icon name="last" size={22} />
+      </button>
+      <button className="btn-icon" data-nav="flip" onClick={onFlip} aria-label="Flip board">
+        <Icon name="flip" size={20} />
+      </button>
+    </nav>
+  );
+}
+
+// "Nd6 is a blunder · best was Kb3" — the current move's verdict, with the
+// verdict word as the thing your eye lands on.
+function MoveVerdict({ labelled }) {
+  if (!labelled) return <div className="move-verdict placeholder" aria-hidden="true" />;
+  const meta = LABELS[labelled.label];
+  const [lead, word] = VERDICT_PHRASE[labelled.label] ?? ["is", meta.name.toLowerCase()];
+  return (
+    <div className={`move-verdict ${meta.className}`} key={labelled.plyIndex}>
+      <MoveBadge label={labelled.label} inline />
+      <p>
+        <strong className="verdict-move">{labelled.san}</strong> {lead} <strong className="verdict-word">{word}</strong>
+        {labelled.bestMoveSan && !NO_BEST_MOVE_HINT.has(labelled.label) && (
+          <span className="verdict-best">
+            {" "}
+            · best was <strong>{labelled.bestMoveSan}</strong>
+          </span>
+        )}
+      </p>
+    </div>
+  );
+}
 
 // `initialMoveIndex` is the move a finding elsewhere in the app (the clock
 // page's "longest think" or "known position" findings) wants highlighted and
@@ -30,6 +190,7 @@ const NO_BEST_MOVE_HINT = new Set(["best", "brilliant", "great", "book"]);
 // as a whole. -1 means "no target, just open at the start" (the normal case,
 // clicking a game from the list).
 export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, note = null }) {
+  const isMobile = useMediaQuery(MOBILE_QUERY);
   const moves = useMemo(() => pgnToMoves(game.pgn), [game.pgn]);
 
   // clockData.js always returns one entry per ply, same order as pgnToMoves,
@@ -48,9 +209,8 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
   // tick later. That single step is what actually animates — just that one
   // move sliding into place, not a jump across everything since move 0.
   const [moveIndex, setMoveIndex] = useState(Math.max(-1, initialMoveIndex - 1));
-  const [boardOrientation, setBoardOrientation] = useState(
-    game.userColor === "black" ? "black" : "white"
-  );
+  const [boardOrientation, setBoardOrientation] = useState(game.userColor === "black" ? "black" : "white");
+  const [panelTab, setPanelTab] = useState("moves"); // laptop panel: "moves" | "review"
 
   // When you drag a piece, you leave the actual game and start exploring your
   // own line. `exploring` holds that made-up position; null means "showing
@@ -131,9 +291,7 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
     return (
       <div className="square-layer" style={squareStyles[square]}>
         {children}
-        {playedMove && square === playedMove.to && currentLabel && (
-          <MoveBadge label={currentLabel.label} />
-        )}
+        {playedMove && square === playedMove.to && currentLabel && <MoveBadge label={currentLabel.label} />}
       </div>
     );
   }
@@ -179,21 +337,46 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
   const bottomSide = sides[boardOrientation];
   const topSide = sides[otherColour(boardOrientation)];
 
-  // Keep the highlighted move visible. Matters most when arriving from a
-  // finding: the move in question is often 30+ moves in, well outside the
-  // move list's visible window.
-  const activeMoveRef = useRef(null);
+  // Keep the current move visible in its list — scrolling the list, never
+  // the page (see scrollWithin). Matters most when arriving from a finding,
+  // where the move in question is often 30+ moves in.
+  const listRef = useRef(null);
   useEffect(() => {
-    activeMoveRef.current?.scrollIntoView({ block: "nearest" });
-  }, [moveIndex]);
+    const container = listRef.current;
+    const active = container?.querySelector(`[data-ply="${moveIndex}"]`);
+    if (active) scrollWithin(container, active, isMobile ? "x" : "y");
+    else if (container && moveIndex === -1) container.scrollTo({ top: 0, left: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+  }, [moveIndex, isMobile, panelTab]);
 
   function goTo(index) {
     setExploring(null);
-    setMoveIndex(index);
+    setMoveIndex(Math.max(-1, Math.min(moves.length - 1, index)));
   }
   function flipBoard() {
     setBoardOrientation((side) => (side === "white" ? "black" : "white"));
   }
+
+  // Arrow keys step through the game, as on every chess site. Ignored while
+  // typing, and whenever a modifier key is held (so browser shortcuts still work).
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.target.closest?.("input, textarea, [contenteditable]")) return;
+      if (event.altKey || event.ctrlKey || event.metaKey) return;
+      const actions = {
+        ArrowLeft: () => goTo(moveIndex - 1),
+        ArrowRight: () => goTo(moveIndex + 1),
+        Home: () => goTo(-1),
+        End: () => goTo(moves.length - 1),
+        f: flipBoard,
+      };
+      const action = actions[event.key];
+      if (!action) return;
+      event.preventDefault();
+      action();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  });
 
   // Dragging a piece branches off into your own line rather than editing the
   // game. Returns false for illegal moves so the piece snaps back.
@@ -203,37 +386,106 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
       const board = new Chess(currentFen);
       const played = board.move({ from: sourceSquare, to: targetSquare, promotion: "q" });
       if (!played) return false;
-      setExploring({
-        fen: board.fen(),
-        line: [...(exploring?.line ?? []), played.san],
-      });
+      setExploring({ fen: board.fen(), line: [...(exploring?.line ?? []), played.san] });
       return true;
     } catch {
       return false;
     }
   }
 
-  return (
-    <div>
-      <button onClick={onBack}>Back to list</button>
+  const controls = {
+    atStart: moveIndex === -1 && !exploring,
+    atEnd: moveIndex === moves.length - 1 && !exploring,
+    onFirst: () => goTo(-1),
+    onPrev: () => goTo(moveIndex - 1),
+    onNext: () => goTo(moveIndex + 1),
+    onLast: () => goTo(moves.length - 1),
+    onFlip: flipBoard,
+  };
 
-      <p className="viewer-meta">
-        <span className="your-color">
-          <span className={`color-dot ${game.userColor}`} /> you played{" "}
-          <span className="color-name">{game.userColor}</span>
-        </span>{" "}
-        — vs {game.opponentName} — {game.result} — {game.timeClass}
-        <a href={game.url} target="_blank" rel="noreferrer">
-          view on Chess.com
+  const you = game.userColor;
+  const accuracy = review.status === "done" ? review.review?.accuracy : null;
+  const progressPercent = review.progress.totalPlies
+    ? Math.round((review.progress.plyDone / review.progress.totalPlies) * 100)
+    : 0;
+
+  // Review status — a progress bar while the engine works, then both
+  // players' accuracy as the headline numbers.
+  const reviewStatus = (
+    <div className="review-status">
+      {review.status === "reviewing" && (
+        <div className="review-progress" role="status">
+          <div className="review-progress-text">
+            <span className="eyebrow">Reviewing</span>
+            <span className="muted">
+              move {Math.ceil(review.progress.plyDone / 2)} of {Math.ceil(review.progress.totalPlies / 2)}
+            </span>
+          </div>
+          <div className="progress-track">
+            <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
+          </div>
+        </div>
+      )}
+      {review.status === "error" && (
+        <p className="error-message review-error">
+          Review failed.{" "}
+          <button className="btn-ghost" onClick={() => review.run(game)}>
+            Try again
+          </button>
+        </p>
+      )}
+      {accuracy && (
+        <div className="accuracy-pair review-accuracy">
+          <div className="accuracy-block you">
+            <span className="eyebrow">You</span>
+            <span className="stat-value gold">{accuracy[you]?.toFixed?.(1) ?? "—"}</span>
+          </div>
+          <div className="accuracy-block">
+            <span className="eyebrow">Opponent</span>
+            <span className="stat-value">{accuracy[otherColour(you)]?.toFixed?.(1) ?? "—"}</span>
+          </div>
+          <span className="accuracy-caption muted">accuracy</span>
+        </div>
+      )}
+    </div>
+  );
+
+  const exploringBanner = exploring && (
+    <div className="exploring-banner">
+      <span className="eyebrow">Your own line</span>
+      <strong className="exploring-line">{exploring.line.join(" ")}</strong>
+      <button className="btn-ghost" onClick={() => setExploring(null)}>
+        <Icon name="back" size={16} /> Back to the game
+      </button>
+    </div>
+  );
+
+  return (
+    <div className={`viewer${isMobile ? " viewer-mobile" : ""}`}>
+      <header className="viewer-header">
+        <button className="btn-icon viewer-back" onClick={onBack} aria-label="Back">
+          <Icon name="back" size={22} />
+        </button>
+        <div className="viewer-title">
+          <span className="eyebrow">
+            <span className={`color-dot ${game.userColor}`} /> <span className="capitalize">{game.timeClass}</span> ·{" "}
+            {formatDate(game.playedAt)}
+          </span>
+          <h1>
+            vs {game.opponentName}
+            {game.opponentRating != null && <span className="title-rating">{game.opponentRating}</span>}
+          </h1>
+        </div>
+        <span className={`pill pill-${game.result}`}>{game.result}</span>
+        <a className="btn-icon external-link" href={game.url} target="_blank" rel="noreferrer" aria-label="Open on Chess.com" title="Open on Chess.com">
+          <Icon name="external" size={20} />
         </a>
-      </p>
+      </header>
 
       {note && <p className="viewer-note">{note}</p>}
 
       <div className="viewer-layout">
         <div className="board-column">
-          {/* Bar and board sit in their own row so the bar can stretch to
-              exactly the board's height, whatever size it renders at. */}
           {/* Opponent on top, you underneath, each with their clock — the
               arrangement of a real board, and of every chess site. The
               evaluation bar stays level with the board itself rather than
@@ -251,6 +503,7 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
                     onPieceDrop: handlePieceDrop,
                     arrows,
                     squareRenderer: renderSquare,
+                    animationDurationInMs: prefersReducedMotion() ? 0 : 220,
                   }}
                 />
               </div>
@@ -258,100 +511,62 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
             <PlayerStrip {...bottomSide} />
           </div>
 
-          {currentLabel && (
-            <p className={`move-label-banner ${LABELS[currentLabel.label].className}`}>
-              <span className="move-label-glyph">{LABELS[currentLabel.label].glyph}</span>
-              {currentLabel.san} is {LABELS[currentLabel.label].name}
-              {currentLabel.bestMoveSan && !NO_BEST_MOVE_HINT.has(currentLabel.label) && (
-                <span className="move-label-best"> · best was {currentLabel.bestMoveSan}</span>
-              )}
-            </p>
+          {isMobile && (
+            <>
+              <MoveStrip moves={moves} labelsByPly={labelsByPly} activeIndex={exploring ? null : moveIndex} onSelect={goTo} listRef={listRef} />
+              {exploringBanner || <MoveVerdict labelled={currentLabel} />}
+            </>
           )}
         </div>
 
-        <div className="moves-panel">
-          <div className="move-controls">
-            <button onClick={() => goTo(-1)} disabled={moveIndex === -1 && !exploring}>
-              |&lt;
-            </button>
-            <button onClick={() => goTo(Math.max(-1, moveIndex - 1))} disabled={moveIndex === -1 && !exploring}>
-              &lt;
-            </button>
-            <button
-              onClick={() => goTo(Math.min(moves.length - 1, moveIndex + 1))}
-              disabled={moveIndex === moves.length - 1 && !exploring}
-            >
-              &gt;
-            </button>
-            <button onClick={() => goTo(moves.length - 1)} disabled={moveIndex === moves.length - 1 && !exploring}>
-              &gt;|
-            </button>
-            <button onClick={flipBoard}>Flip board</button>
-          </div>
+        {isMobile ? (
+          <section className="mobile-review">
+            <div className="card">{reviewStatus}</div>
+            <ReviewSummary game={game} review={review.review} status={review.status} />
+          </section>
+        ) : (
+          <section className="side-panel card">
+            <div className="side-panel-inner">
+              {reviewStatus}
+              {exploringBanner || <MoveVerdict labelled={currentLabel} />}
 
-          {exploring ? (
-            <p className="exploring-banner">
-              Exploring your own line: <strong>{exploring.line.join(" ")}</strong>
-              <button onClick={() => setExploring(null)}>Back to the game</button>
-            </p>
-          ) : (
-            <div className="review-controls">
-              {review.status === "reviewing" && (
-                <span className="review-progress">
-                  Reviewing… move {Math.ceil(review.progress.plyDone / 2)} of{" "}
-                  {Math.ceil(review.progress.totalPlies / 2)}
-                </span>
-              )}
-              {review.status === "error" && (
-                <span className="error-message">
-                  Review failed. <button onClick={() => review.run(game)}>Try again</button>
-                </span>
-              )}
-              {review.status === "done" && review.review?.accuracy && (
-                <span className="review-accuracy">
-                  <strong>You</strong> {accuracyFor(game.userColor, review.review.accuracy)}% accurate
-                  <span className="review-opponent">
-                    {" "}
-                    · opponent {accuracyFor(otherColour(game.userColor), review.review.accuracy)}%
-                  </span>
-                </span>
-              )}
+              <div className="panel-tabs" role="tablist">
+                <button role="tab" aria-selected={panelTab === "moves"} className={panelTab === "moves" ? "active" : ""} onClick={() => setPanelTab("moves")}>
+                  Moves
+                </button>
+                <button role="tab" aria-selected={panelTab === "review"} className={panelTab === "review" ? "active" : ""} onClick={() => setPanelTab("review")}>
+                  Review
+                </button>
+              </div>
+
+              <div className="panel-body">
+                {panelTab === "moves" ? (
+                  <MoveTable
+                    moves={moves}
+                    clockMoves={clockMoves}
+                    labelsByPly={labelsByPly}
+                    activeIndex={exploring ? null : moveIndex}
+                    onSelect={goTo}
+                    listRef={listRef}
+                  />
+                ) : (
+                  <div className="panel-review">
+                    <ReviewSummary game={game} review={review.review} status={review.status} />
+                  </div>
+                )}
+              </div>
+
+              <BoardControls {...controls} className="panel-controls" />
             </div>
-          )}
-
-          {/* The full scorecard — every label counted for both players. Fills
-              in as the review runs; the averages wait until it's finished. */}
-          <ReviewSummary game={game} review={review.review} status={review.status} />
-
-          <ol className="move-list">
-            {moves.map((move, index) => {
-              const timeLabel = formatSeconds(clockMoves[index]?.timeSpentSeconds ?? null);
-              const labelled = labelsByPly.get(index);
-              return (
-                <li key={index}>
-                  <button
-                    ref={index === moveIndex ? activeMoveRef : null}
-                    className={index === moveIndex && !exploring ? "active" : ""}
-                    onClick={() => goTo(index)}
-                  >
-                    {move.color === "w" ? `${move.moveNumber}. ` : ""}
-                    {move.san}
-                    {labelled && (
-                      <span
-                        className={`move-label ${LABELS[labelled.label].className}`}
-                        title={LABELS[labelled.label].name}
-                      >
-                        {LABELS[labelled.label].glyph}
-                      </span>
-                    )}
-                    {timeLabel && <span className="move-time"> {timeLabel}</span>}
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
-        </div>
+          </section>
+        )}
       </div>
+
+      {/* The phone's controls are pinned to the bottom of the screen. Rendered
+          into <body> rather than here, because this page arrives with a
+          transform animation, and a transformed parent would make "fixed"
+          mean "fixed to the page" for the length of that animation. */}
+      {isMobile && createPortal(<BoardControls {...controls} className="control-bar glass" />, document.body)}
     </div>
   );
 }

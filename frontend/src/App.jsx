@@ -7,18 +7,65 @@ import BlundersPage from "./pages/BlundersPage";
 import OnboardingPage from "./pages/OnboardingPage";
 import TimeClassTabs from "./components/TimeClassTabs";
 import GoogleSignInButton from "./components/GoogleSignInButton";
+import EmptyState from "./components/EmptyState";
+import Icon, { Logo } from "./components/Icon";
 import { useFetchedGames } from "./hooks/useFetchedGames";
 import { useBlunderScan } from "./hooks/useBlunderScan";
 import { useAuth } from "./hooks/useAuth";
+import { useMediaQuery, MOBILE_QUERY } from "./hooks/useMediaQuery";
 import { saveChessComUsername } from "./lib/backendApi";
 import "./App.css";
 
+// The four screens, in the order they appear in the rail and the tab bar.
 const VIEWS = [
-  { key: "list", label: "Games list" },
-  { key: "tilt", label: "Tilt findings" },
-  { key: "clock", label: "Clock" },
-  { key: "blunders", label: "Blunders" },
+  { key: "list", label: "Games", icon: "games" },
+  { key: "tilt", label: "Tilt", icon: "tilt" },
+  { key: "clock", label: "Clock", icon: "clock" },
+  { key: "blunders", label: "Blunders", icon: "blunders" },
 ];
+
+// Signed in: your initial in a gold ring, which opens a small menu with your
+// name and "Sign out". Signed out: Google's own compact sign-in button.
+function AccountButton({ user, onSignOut, onGoogleCredential, menuPlacement }) {
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef(null);
+
+  // Close the menu on any tap outside it — the behaviour everyone expects,
+  // and the only way to dismiss it on a phone.
+  useEffect(() => {
+    if (!open) return;
+    const close = (event) => {
+      if (!rootRef.current?.contains(event.target)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [open]);
+
+  if (!user) return <GoogleSignInButton variant="compact" onCredential={onGoogleCredential} />;
+
+  const initial = (user.name ?? "?").trim().charAt(0).toUpperCase();
+  return (
+    <div className="account" ref={rootRef}>
+      <button
+        className="avatar"
+        onClick={() => setOpen((value) => !value)}
+        aria-label={`Account: ${user.name}`}
+        aria-expanded={open}
+      >
+        {initial}
+      </button>
+      {open && (
+        <div className={`account-menu glass account-menu-${menuPlacement}`} role="menu">
+          <span className="eyebrow">Signed in as</span>
+          <strong className="account-name">{user.name}</strong>
+          <button className="btn-ghost account-signout" role="menuitem" onClick={onSignOut}>
+            <Icon name="logout" size={18} /> Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function App() {
   // moveIndex lets a finding (e.g. the clock page's "longest think") open
@@ -32,6 +79,40 @@ function App() {
   // list unmounts that page, and a scan takes minutes — losing the results
   // just for looking at one of them would be miserable.
   const blunderScan = useBlunderScan();
+  const isMobile = useMediaQuery(MOBILE_QUERY);
+
+  // --- the browser's own back button ---
+  // There's no router yet (the doc brings in react-router later), but a
+  // phone's back gesture has to work NOW: without this, pressing back inside
+  // a game didn't return to the list — it left the site entirely. Each
+  // screen change is recorded in the browser's history, and going back
+  // restores the screen that was there before.
+  useEffect(() => {
+    window.history.replaceState({ view: "list" }, "");
+    const onPopState = (event) => {
+      const state = event.state ?? { view: "list" };
+      setActiveView(state.view ?? "list");
+      if (!state.game) setOpenedGame(null);
+      window.scrollTo(0, 0);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, []);
+
+  function navigate(view) {
+    if (view === activeView && !openedGame) return;
+    setOpenedGame(null);
+    setActiveView(view);
+    window.history.pushState({ view }, "");
+    window.scrollTo(0, 0);
+  }
+
+  // Leaving a game goes BACK in history rather than forward to the list, so
+  // the in-app back button and the phone's back gesture stay the same thing.
+  function closeGame() {
+    if (window.history.state?.game) window.history.back();
+    else setOpenedGame(null);
+  }
 
   // The onboarding screen (sign in, or continue as guest) shows until it's
   // explicitly dismissed by completing one of those two paths — a signed-in
@@ -116,6 +197,8 @@ function App() {
   // (e.g. why a move was a blunder), shown above the board.
   function openGame(game, moveIndex = -1, note = null) {
     setOpenedGame({ game, moveIndex, note });
+    window.history.pushState({ view: activeView, game: true }, "");
+    window.scrollTo(0, 0);
   }
 
   if (!auth.checkedSession) {
@@ -141,25 +224,29 @@ function App() {
           game={openedGame.game}
           initialMoveIndex={openedGame.moveIndex}
           note={openedGame.note}
-          onBack={() => setOpenedGame(null)}
+          onBack={closeGame}
         />
       );
     }
-    if (activeView === "tilt") {
-      return <TiltPage games={fetched.filteredGames} onBack={() => setActiveView("list")} onOpenGame={openGame} />;
-    }
-    if (activeView === "clock") {
-      return <ClockPage games={fetched.filteredGames} onBack={() => setActiveView("list")} onOpenGame={openGame} />;
-    }
-    if (activeView === "blunders") {
+
+    // Tilt, Clock and Blunders all read the fetched games. Before there are
+    // any, say so and offer the way forward — never a blank page, never a
+    // page of zeros pretending to be findings.
+    if (activeView !== "list" && fetched.games.length === 0) {
       return (
-        <BlundersPage
-          games={fetched.filteredGames}
-          scan={blunderScan}
-          onBack={() => setActiveView("list")}
-          onOpenGame={openGame}
+        <EmptyState
+          icon={VIEWS.find((v) => v.key === activeView)?.icon}
+          title="Fetch your games first"
+          body="Every finding here is worked out from your own games. Load them on the Games screen and this page fills itself in."
+          actionLabel="Go to Games"
+          onAction={() => navigate("list")}
         />
       );
+    }
+    if (activeView === "tilt") return <TiltPage games={fetched.filteredGames} onOpenGame={openGame} filterTabs={filterTabs} onGoToGames={() => navigate("list")} />;
+    if (activeView === "clock") return <ClockPage games={fetched.filteredGames} onOpenGame={openGame} filterTabs={filterTabs} />;
+    if (activeView === "blunders") {
+      return <BlundersPage games={fetched.filteredGames} scan={blunderScan} onOpenGame={openGame} filterTabs={filterTabs} />;
     }
     return (
       <GamesListPage
@@ -169,52 +256,91 @@ function App() {
         gamesToFetch={fetched.gamesToFetch}
         setGamesToFetch={fetched.setGamesToFetch}
         games={fetched.filteredGames}
+        allGamesCount={fetched.games.length}
+        timeClassFilter={fetched.timeClassFilter}
         status={fetched.status}
         errorMessage={fetched.errorMessage}
         fetchGames={handleFetchGames}
+        filterTabs={filterTabs}
       />
     );
   }
 
-  return (
-    <>
-      <header className="app-header">
-        <h1>Chess DNA</h1>
-        <span className="tagline">how you specifically lose</span>
-        <div className="header-right">
-          {fetched.games.length > 0 && !openedGame && (
-            <nav className="header-nav">
-              {VIEWS.filter((v) => v.key !== activeView).map((v) => (
-                <button key={v.key} onClick={() => setActiveView(v.key)}>
-                  {v.label}
-                </button>
-              ))}
-            </nav>
-          )}
-          <div className="auth-slot">
-            {auth.user ? (
-              <span className="signed-in-as">
-                {auth.user.name} <button onClick={auth.signOut}>Sign out</button>
-              </span>
-            ) : (
-              <GoogleSignInButton onCredential={handleHeaderGoogleCredential} />
-            )}
-          </div>
-        </div>
-      </header>
+  // Each page places the time-control filter itself, right under its own
+  // heading — a filter above the page title gets the order backwards.
+  const filterTabs = (
+    <TimeClassTabs
+      totalCount={fetched.games.length}
+      tabs={fetched.timeClassTabs}
+      active={fetched.timeClassFilter}
+      onChange={fetched.setTimeClassFilter}
+    />
+  );
 
-      <main className="app-main">
-        {!openedGame && (
-          <TimeClassTabs
-            totalCount={fetched.games.length}
-            tabs={fetched.timeClassTabs}
-            active={fetched.timeClassFilter}
-            onChange={fetched.setTimeClassFilter}
-          />
-        )}
-        {renderMain()}
+  const account = (placement) => (
+    <AccountButton
+      user={auth.user}
+      onSignOut={auth.signOut}
+      onGoogleCredential={handleHeaderGoogleCredential}
+      menuPlacement={placement}
+    />
+  );
+
+  const navItems = VIEWS.map((view) => (
+    <button
+      key={view.key}
+      className={`nav-item${view.key === activeView ? " active" : ""}`}
+      onClick={() => navigate(view.key)}
+      aria-current={view.key === activeView ? "page" : undefined}
+    >
+      <Icon name={view.icon} size={22} />
+      <span>{view.label}</span>
+    </button>
+  ));
+
+  // Inside a game on a phone, the board needs every pixel: the viewer brings
+  // its own slim top bar and its own bottom controls, so the app's bars step
+  // aside.
+  const viewerOnPhone = isMobile && openedGame;
+  // Replays the page-arrival animation on every screen change.
+  const screenKey = openedGame ? `game-${openedGame.game.id}` : activeView;
+
+  return (
+    <div className={`shell${isMobile ? " shell-mobile" : ""}`}>
+      {!isMobile && (
+        <aside className="rail glass" aria-label="Main">
+          <div className="rail-brand" title="Chess DNA">
+            <Logo size={40} />
+          </div>
+          <nav className="rail-nav">{navItems}</nav>
+          <div className="rail-account">{account("rail")}</div>
+        </aside>
+      )}
+
+      {isMobile && !viewerOnPhone && (
+        <header className="topbar glass">
+          <div className="topbar-brand">
+            <Logo size={30} />
+            <span className="wordmark">
+              Chess <span className="accent-em">DNA</span>
+            </span>
+          </div>
+          {account("topbar")}
+        </header>
+      )}
+
+      <main className={`content${viewerOnPhone ? " content-viewer" : ""}`}>
+        <div key={screenKey} className="page page-enter">
+          {renderMain()}
+        </div>
       </main>
-    </>
+
+      {isMobile && !viewerOnPhone && (
+        <nav className="tabbar glass" aria-label="Main">
+          {navItems}
+        </nav>
+      )}
+    </div>
   );
 }
 

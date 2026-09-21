@@ -1,44 +1,99 @@
-.viewer-meta {
-  color: var(--color-text-muted);
-  margin: 0.75rem 0 1.25rem;
-}
+/* ==========================================================================
+   Game viewer — D-051.
+   Laptop: the board as large as the screen height allows, beside a glass
+           panel (verdict, Moves / Review tabs, controls). Arrow keys work.
+   Phone:  a slim sticky header, a full-width board, a sideways moves strip,
+           and the controls pinned to the bottom of the screen.
+   ========================================================================== */
 
-.your-color {
-  color: var(--color-text);
-}
-
-.color-name {
+.capitalize {
   text-transform: capitalize;
 }
 
-.viewer-meta a {
-  margin-left: 0.5rem;
+/* --- header ----------------------------------------------------------------- */
+
+.viewer-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 0.9rem;
+  margin-bottom: 1.25rem;
+}
+
+.viewer-title {
+  min-width: 0;
+}
+
+.viewer-title .eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  letter-spacing: 0.1em;
+}
+
+.viewer-title h1 {
+  font-size: 1.55rem;
+  margin-top: 0.2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.title-rating {
+  margin-left: 0.55rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--color-text-faint);
+}
+
+.external-link {
+  color: var(--color-text-muted);
+  border: 1px solid var(--glass-border);
+  background: rgba(255, 244, 225, 0.04);
+  transition: color var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .external-link:hover {
+    color: var(--color-accent);
+    background: var(--color-accent-soft);
+  }
 }
 
 /* The "why was this a blunder" sentence, when the viewer was opened from a
-   finding rather than from the plain games list. */
+   finding rather than from the games list. */
 .viewer-note {
   margin: 0 0 1.25rem;
-  padding: 0.7rem 0.9rem;
-  border-left: 2px solid var(--color-accent);
-  background: var(--color-surface);
+  padding: 0.85rem 1.1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-accent-line);
+  background: linear-gradient(90deg, rgba(201, 154, 60, 0.14), rgba(201, 154, 60, 0.04));
   color: var(--color-text);
-  max-width: 640px;
-  line-height: 1.5;
+  line-height: 1.55;
+  max-width: 760px;
+}
+
+/* --- layout ------------------------------------------------------------------ */
+
+.viewer {
+  /* The board is as big as the screen's height allows, within reason — so on
+     a laptop the whole board, both clocks and the header fit without
+     scrolling. */
+  --board-size: clamp(320px, calc(100vh - 290px), 600px);
 }
 
 .viewer-layout {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(320px, 1fr);
   gap: 1.5rem;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .board-column {
-  flex-shrink: 0;
+  min-width: 0;
 }
 
-/* Opponent strip, board, your strip — a column, so the two clocks sit
-   directly above and below the board the way they do on a real one. */
 .board-stack {
   display: flex;
   flex-direction: column;
@@ -48,187 +103,514 @@
    the board next to it, at whatever size the board ends up. */
 .board-row {
   display: flex;
-  gap: 0.75rem;
+  gap: 0.6rem;
   align-items: stretch;
 }
 
 /* container-type makes this the reference the move-quality medals size
    themselves against (1cqw = 1% of the board's width), so they stay the same
-   fraction of a square whether the board is 420px or a phone's full width. */
+   fraction of a square at every size. The thin frame is also where a medal on
+   an edge square overhangs, so it's never clipped. */
 .board-panel {
   container-type: inline-size;
-  width: 420px;
+  width: var(--board-size);
   max-width: 100%;
-  flex-shrink: 1;
-  padding: 0.75rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
+  padding: 0.35rem;
   border-radius: var(--radius-md);
-  box-sizing: border-box;
+  background: rgba(20, 14, 10, 0.6);
+  border: 1px solid var(--glass-border);
+  box-shadow: 0 30px 60px -30px rgba(0, 0, 0, 0.95), var(--glass-highlight);
 }
 
-.moves-panel {
-  flex: 1;
-  min-width: 220px;
-}
+/* --- side panel (laptop) ------------------------------------------------------- */
 
-/* Same reasoning as the games-list layout: stack instead of squeezing the
-   move list into a sliver beside a fixed-width board. */
-@media (max-width: 720px) {
-  .viewer-layout {
-    flex-direction: column;
-  }
-
-  .board-column {
-    width: 100%;
-  }
-
-  /* On a phone the bar goes under the board (flat, full width) rather than
-     beside it, so the board itself keeps the whole screen width. */
-  .board-row {
-    flex-direction: column-reverse;
-    gap: 0.5rem;
-  }
-
-  .board-panel {
-    width: 100%;
-    margin: 0 auto;
-  }
-
-  .moves-panel {
-    width: 100%;
-    min-width: 0;
-  }
-}
-
-.move-controls {
-  display: flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-  margin-bottom: 0.75rem;
-}
-
-.move-list {
-  list-style: none;
-  margin: 0;
+/* The panel takes the board column's height exactly: its content lives in an
+   absolutely-positioned inner box, so however long the move list gets it
+   scrolls inside the panel instead of stretching the page. */
+.side-panel {
+  position: relative;
   padding: 0;
-  max-height: 420px;
-  overflow-y: auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-surface);
+  min-height: 460px;
 }
 
-.move-list li {
-  display: inline-block;
+.side-panel-inner {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.1rem 1.1rem 0.9rem;
 }
 
-.move-list button {
-  background: transparent;
+.panel-tabs {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  background: rgba(10, 7, 5, 0.35);
+}
+
+.panel-tabs button {
+  flex: 1;
   border: none;
-  border-radius: 0;
-  padding: 0.35rem 0.5rem;
-  font-family: var(--font-mono);
+  background: transparent;
+  color: var(--color-text-muted);
+  border-radius: 6px;
+  padding: 0.45rem;
 }
 
-.move-list button.active {
+.panel-tabs button.active {
+  color: var(--color-text);
+  background: rgba(255, 244, 225, 0.08);
+  box-shadow: var(--glass-highlight), 0 4px 12px -6px rgba(0, 0, 0, 0.6);
+}
+
+.panel-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.panel-review {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  animation: fade var(--dur) var(--ease-out) both;
+}
+
+/* Inside the panel the scorecard is already on a glass card — no second one. */
+.panel-review .review-summary {
+  border: none;
+  background: transparent;
+  padding: 0;
+  margin: 0;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.panel-controls {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.35rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(237, 230, 218, 0.06);
+}
+
+.panel-controls .btn-icon {
+  flex: 1;
+  height: 2.75rem;
+  border-radius: var(--radius-sm);
+}
+
+/* "Next" is what you press most, so it's the one that looks pressable. */
+.board-controls .btn-step {
+  color: #1b140f;
+  background: linear-gradient(180deg, #e0b458 0%, #c99a3c 100%);
+  border-color: transparent;
+  box-shadow: 0 8px 20px -10px rgba(201, 154, 60, 0.8);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .board-controls .btn-step:hover:not(:disabled) {
+    background: linear-gradient(180deg, #e8c070 0%, #d4a648 100%);
+    border-color: transparent;
+  }
+
+  .panel-tabs button:hover:not(.active) {
+    background: rgba(255, 244, 225, 0.04);
+    color: var(--color-text);
+  }
+}
+
+/* --- review status ------------------------------------------------------------ */
+
+.review-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.review-progress-text {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.85rem;
+}
+
+.review-error {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.accuracy-pair {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  align-items: end;
+  gap: 1.5rem;
+  animation: rise var(--dur-slow) var(--ease-out) both;
+}
+
+.accuracy-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.accuracy-block .stat-value {
+  font-size: 1.9rem;
+}
+
+.accuracy-block:not(.you) .stat-value {
+  color: var(--color-text-muted);
+}
+
+.accuracy-caption {
+  justify-self: end;
+  font-size: 0.8rem;
+  padding-bottom: 0.35rem;
+}
+
+/* --- the verdict line ---------------------------------------------------------- */
+
+.move-verdict {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 2.6rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: var(--radius-md);
+  background: rgba(10, 7, 5, 0.3);
+  border: 1px solid rgba(237, 230, 218, 0.05);
+  color: var(--color-text);
+  animation: rise var(--dur) var(--ease-out) both;
+}
+
+.move-verdict.placeholder {
+  background: transparent;
+  border-color: transparent;
+  animation: none;
+}
+
+.move-verdict p {
+  margin: 0;
+  line-height: 1.4;
+}
+
+.verdict-move {
+  font-family: var(--font-heading);
+  font-size: 1.1rem;
+}
+
+/* The verdict word is the point of the sentence — in its label's colour. */
+.verdict-word {
+  color: var(--label-color, var(--color-text));
+  font-weight: 700;
+}
+
+.verdict-best {
+  color: var(--color-text-muted);
+}
+
+.verdict-best strong {
+  color: var(--color-win);
+}
+
+.exploring-banner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-accent-line);
+  background: var(--color-accent-soft);
+  animation: rise var(--dur) var(--ease-out) both;
+}
+
+.exploring-line {
+  font-family: var(--font-mono);
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.exploring-banner .btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: var(--color-accent);
+  padding: 0.3rem 0.5rem;
+}
+
+/* --- move table (laptop) --------------------------------------------------------- */
+
+.move-table {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  margin: 0 -0.35rem;
+  padding: 0 0.35rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(237, 230, 218, 0.15) transparent;
+}
+
+.move-row {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr 1fr;
+  align-items: center;
+  border-radius: var(--radius-sm);
+}
+
+.move-row:nth-child(odd) {
+  background: rgba(255, 244, 225, 0.022);
+}
+
+.move-number {
+  padding-left: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--color-text-faint);
+}
+
+.move-cell {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.4rem 0.5rem;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  text-align: left;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+}
+
+.move-cell.empty {
+  display: block;
+}
+
+.move-cell.active {
   background: var(--color-accent);
-  color: var(--color-bg);
+  color: #1b140f;
+  box-shadow: 0 6px 16px -8px rgba(201, 154, 60, 0.9);
+}
+
+.move-cell.active .move-label,
+.move-cell.active .move-time {
+  color: #1b140f;
 }
 
 .move-time {
-  color: var(--color-text-muted);
-  font-size: 0.75rem;
+  margin-left: auto;
+  font-size: 0.7rem;
+  color: var(--color-text-faint);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .move-cell:hover:not(.active) {
+    background: rgba(255, 244, 225, 0.07);
+  }
 }
 
 /* Move-quality labels.
    These are the one place in the app that deliberately breaks the "exactly
    one accent colour" rule — see decision.md D-035. A good move and a blunder
    have to be distinguishable at a glance, and every chess site in existence
-   uses colour to do it. */
+   uses colour to do it. Each also sets --label-color for anything that wants
+   the colour without tinting everything around it. */
 .move-label {
-  margin-left: 0.25rem;
-  font-weight: 600;
-  font-size: 0.8rem;
-}
-
-.label-brilliant { color: #35c4b5; }
-.label-great { color: #6a9ee8; }
-.label-book { color: #a1836b; }
-.label-best { color: #8bc34a; }
-.label-excellent { color: #7aa653; }
-.label-good { color: var(--color-text-muted); }
-.label-inaccuracy { color: #e0b641; }
-.label-mistake { color: #e08b41; }
-.label-miss { color: #e07a41; }
-.label-blunder { color: #d15b55; }
-
-/* The bigger "Nf3 is Brilliant" line under the board. */
-.move-label-banner {
-  margin: 0.75rem 0 0;
-  font-size: 0.9rem;
-  display: flex;
-  align-items: baseline;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-}
-
-.move-label-glyph {
   font-weight: 700;
-  font-size: 1.05rem;
+  font-size: 0.78rem;
 }
 
-.move-label-best {
-  color: var(--color-text-muted);
-}
+.label-brilliant { color: #35c4b5; --label-color: #35c4b5; }
+.label-great { color: #6a9ee8; --label-color: #6a9ee8; }
+.label-book { color: #a1836b; --label-color: #b8987c; }
+.label-best { color: #8bc34a; --label-color: #8bc34a; }
+.label-excellent { color: #7aa653; --label-color: #8dbb62; }
+.label-good { color: var(--color-text-muted); --label-color: #c2b6a5; }
+.label-inaccuracy { color: #e0b641; --label-color: #e0b641; }
+.label-mistake { color: #e08b41; --label-color: #e08b41; }
+.label-miss { color: #e07a41; --label-color: #e07a41; }
+.label-blunder { color: #d15b55; --label-color: #e0625b; }
 
-.review-controls {
-  margin-bottom: 0.75rem;
-  font-size: 0.85rem;
-  min-height: 1.9rem;
-  display: flex;
-  align-items: center;
-}
-
-.review-progress,
-.review-accuracy {
-  color: var(--color-text-muted);
-}
-
-.review-accuracy strong {
+/* The verdict line carries a label class for --label-color only; its own
+   text stays in the normal colour. */
+.move-verdict[class*="label-"] {
   color: var(--color-text);
-  font-weight: 600;
 }
 
-.review-opponent {
-  opacity: 0.75;
+/* --- the progress bar (shared with the Blunders page) ----------------------------- */
+
+.progress-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 244, 225, 0.08);
+  overflow: hidden;
 }
 
-/* Dotted underline as a quiet "hover me, there's a caveat" cue — this number
-   is an estimate and shouldn't be read as a rating. */
-.estimated-rating {
-  border-bottom: 1px dotted var(--color-border);
-  cursor: help;
+.progress-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #b8862f, #e8c070);
+  box-shadow: 0 0 12px rgba(232, 192, 112, 0.5);
+  transition: width var(--dur-slow) var(--ease-out);
 }
 
-.exploring-banner {
-  margin: 0 0 0.75rem;
-  padding: 0.5rem 0.7rem;
-  background: var(--color-surface);
-  border-left: 2px solid var(--color-accent);
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
+/* --- phone ---------------------------------------------------------------------- */
+
+.viewer-mobile .viewer-header {
+  position: sticky;
+  top: 0;
+  z-index: 15;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
   gap: 0.6rem;
-  flex-wrap: wrap;
+  margin: 0 0 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--glass-bg-strong);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  border-bottom: 1px solid var(--glass-border);
 }
 
-.exploring-banner strong {
+.viewer-mobile .viewer-title h1 {
+  font-size: 1.1rem;
+}
+
+.viewer-mobile .viewer-title .eyebrow {
+  font-size: 0.65rem;
+}
+
+.viewer-mobile .viewer-note {
+  margin: 0 0.75rem 0.75rem;
+  font-size: 0.9rem;
+}
+
+.viewer-mobile .viewer-layout {
+  display: block;
+}
+
+.viewer-mobile .board-column {
+  padding: 0 0.6rem;
+}
+
+.viewer-mobile .board-panel {
+  width: 100%;
+  padding: 0.25rem;
+}
+
+/* On a phone the bar goes under the board (flat, full width) rather than
+   beside it, so the board itself keeps the whole screen width. */
+.viewer-mobile .board-row {
+  flex-direction: column-reverse;
+  gap: 0.4rem;
+}
+
+.move-strip {
+  display: flex;
+  gap: 0.2rem;
+  margin: 0.5rem -0.6rem 0.5rem;
+  padding: 0.35rem 0.6rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Soft fade at both edges, so it reads as "more this way". */
+  mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+}
+
+.move-strip::-webkit-scrollbar {
+  display: none;
+}
+
+.strip-move {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.2rem;
+  padding: 0.45rem 0.6rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
   font-family: var(--font-mono);
-  font-weight: 500;
+  font-size: 0.9rem;
 }
 
-.move-list button.active .move-time {
-  color: var(--color-bg);
-  opacity: 0.7;
+.strip-number {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--color-text-faint);
+  margin-right: 0.1rem;
+}
+
+.strip-move.active {
+  background: var(--color-accent);
+  color: #1b140f;
+}
+
+.strip-move.active .strip-number,
+.strip-move.active .move-label {
+  color: #1b140f;
+}
+
+.viewer-mobile .move-verdict {
+  margin-bottom: 0.9rem;
+}
+
+.mobile-review {
+  display: grid;
+  gap: 0.85rem;
+  padding: 0 0.6rem;
+}
+
+.mobile-review .review-summary {
+  margin: 0;
+}
+
+/* The bottom control bar — pinned under the thumb, above the phone's home
+   indicator. Rendered into <body> (see the viewer), so "fixed" really is fixed. */
+.control-bar {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: calc(10px + var(--safe-bottom));
+  z-index: 30;
+  height: var(--tabbar-height);
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.3rem;
+  padding: 0.4rem;
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg-strong);
+  animation: rise var(--dur-slow) var(--ease-out) both;
+}
+
+.control-bar .btn-icon {
+  width: 100%;
+  height: 100%;
+  border-radius: var(--radius-md);
+  border-color: transparent;
+  background: transparent;
+}
+
+.control-bar .btn-step {
+  background: linear-gradient(180deg, #e0b458 0%, #c99a3c 100%);
+}
+
+/* --- in between: a laptop window too narrow for side by side ------------------------ */
+
+@media (max-width: 1180px) and (min-width: 900px) {
+  .viewer-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .board-column {
+    justify-self: center;
+  }
+
+  .side-panel {
+    min-height: 520px;
+  }
 }

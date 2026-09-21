@@ -6,6 +6,75 @@ here.
 
 ---
 
+## D-051 — The redesign: a real app shell, glass, emphasis, motion, and phones done properly
+Date: 2026-09-21
+Phase: between 5 and 6 (Phase 5's baseline put on hold by the user for this)
+Decided by: user ("make it the best UI UX app … glassmorphism … our own colours … font emphasis on
+important text … do the basics of good UI"), with a reference image for the feel
+
+The user named four problems; a before/after tour of every screen at 390px and 1366px found the rest.
+
+**What was wrong, measured before touching anything:**
+- In the game viewer on a phone, six taps of "next" scrolled the **page** 496px and pushed the board
+  267px above the top of the screen. Cause: `scrollIntoView()` scrolls every scrollable container up
+  the chain, the page included, not just the move list.
+- Hover-only features on touch screens: the games list's "hover a game to see how it ended" board sat
+  under the table on a phone showing the starting position, doing nothing.
+- The header only listed the screens you *weren't* on — nothing ever said where you were — and
+  vanished inside a game. The phone's back gesture inside a game **left the site**.
+- On a phone the games table was cut off (result and time control off-screen).
+- Everything was the same flat bordered box: no depth, no hierarchy, no motion.
+
+**What it is now:**
+- **Shell.** Laptop: a frosted-glass icon rail (Games, Tilt, Clock, Blunders; the current one lit
+  gold) with the account at its foot. Phone: a slim top bar and a **bottom tab bar** in thumb reach.
+  Inside a game on a phone both step aside for the viewer's own sticky header and bottom control bar.
+- **Back button.** Each screen change is pushed to the browser's history; back restores the previous
+  screen. The in-app back button *is* history back, so the two can't disagree. A stop-gap until the
+  doc's `react-router`, but a phone's back gesture has to work now.
+- **Glass.** Translucent cards with blur over a softly lit background (two warm glows on a fixed
+  layer). Glass over a flat colour just looks grey; it needs light behind it.
+- **Emphasis.** Fraunces is kept for headlines and headline numbers only; the one word in a headline
+  that carries the meaning goes gold italic ("how you *specifically* lose", "Stop after *8 games*").
+  Each findings page leads with its finding as the headline instead of a label like "Tilt".
+- **Motion.** One easing curve everywhere; pages fade and rise in, lists cascade (delay capped so a
+  long list doesn't take seconds), the time-control pill slides, bars grow, verdict medals pop in.
+  All of it switches off under `prefers-reduced-motion`.
+- **No hover on touch.** Every hover style lives inside `(hover: hover) and (pointer: fine)` so taps
+  don't leave "stuck" hover states. The hover preview board exists only on hover-capable laptops;
+  phones get one card per game instead of a table.
+- **Viewer.** Laptop: board sized to the screen height, a glass panel with the verdict, **Moves /
+  Review** tabs (a proper numbered move table; the scorecard), controls at its foot, and arrow keys.
+  Phone: full-width board, a sideways moves strip that keeps the current move centred, controls pinned
+  to the bottom. The move list now scrolls **only itself** (`scrollWithin`). Measured after: **0px**
+  page movement for the same six taps.
+- **Small basics:** inputs at 16px (iOS zooms into anything smaller), `viewport-fit=cover` and
+  safe-area padding for the iPhone home indicator, keyboard focus rings, Enter/Space on table rows,
+  a loading skeleton, durations as "11m 14s" not "674s" (`lib/format.js`, tested), the time-control
+  filter placed under each page's heading rather than above it, an empty state on every screen
+  before games are loaded, and Tilt's "not enough data" showing a meter (8 / 20) and a way forward.
+
+**A trap worth writing down.** The page-arrival animation originally used `animation-fill-mode:
+both`, which holds the last keyframe after the animation ends — and the last keyframe was
+`transform: none`, which the browser keeps as an identity transform. An invisible transform on the
+page silently broke two things inside it: `position: fixed` became relative to the page, not the
+screen, and `backdrop-filter` blur stopped working (text showed straight through the phone viewer's
+sticky header). Found by checking computed styles up the ancestor chain rather than guessing. Fixed
+with `backwards`, which holds only the *first* frame, during the delay, and leaves nothing behind.
+The phone control bar is also rendered into `<body>` via a portal, so it is independent of this.
+
+**Verified:** zero sideways overflow on every screen at 390px and 1366px; a regression script passing
+12/12 — back from a game stays on the site (both sizes), arrow keys and Home work, dragging a piece
+still explores a line (both sizes), a blunder scan still completes (both sizes), no page errors; and
+20/20 unit tests. Scan-time estimate left at 3.5s/game (D-031): short low-rated games scan at ~1.6s
+(D-049), but an estimate that runs over is worse than one that finishes early.
+
+Affects: nearly every file under `frontend/src` — see the flow.md file map. New: `components/Icon.jsx`,
+`components/EmptyState.jsx`, `hooks/useMediaQuery.js`, `lib/gameStats.js`, `lib/format.js`,
+`pages/FindingsPage.css`, two test files. Removed: `pages/TiltPage.css`, `pages/ClockPage.css`.
+
+---
+
 ## D-050 — On a phone, the header wraps into two rows
 Date: 2026-09-21
 Phase: 5 (found while checking the Blunders page on mobile)

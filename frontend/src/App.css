@@ -1,103 +1,239 @@
-.app-header {
+/* ==========================================================================
+   The app shell — D-051.
+   Laptop: a glass icon rail on the left, content to its right.
+   Phone:  a slim glass top bar, content, and a glass tab bar at the bottom
+           within thumb reach. Inside a game on a phone, both bars step aside
+           and the viewer brings its own.
+   ========================================================================== */
+
+.shell {
+  min-height: 100vh;
+}
+
+/* --- laptop: the rail ------------------------------------------------------ */
+
+.rail {
+  position: fixed;
+  top: 12px;
+  bottom: 12px;
+  left: 12px;
+  width: var(--rail-width);
+  z-index: 20;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem 0;
+  gap: 1.5rem;
+}
+
+.rail-brand {
+  display: grid;
+  place-items: center;
+}
+
+.rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0 0.6rem;
+}
+
+.rail-account {
+  margin-top: auto;
+  display: grid;
+  place-items: center;
+}
+
+/* One nav item: icon over a short label, in both the rail and the tab bar. */
+.nav-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.65rem 0.2rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+}
+
+.nav-item .icon {
+  transition: transform var(--dur) var(--ease-spring), color var(--dur-fast) var(--ease-out);
+}
+
+/* Where you are: gold, a soft gold wash, and a thin gold edge — the same
+   treatment as the reference's active "Home" tile, in our own colours. */
+.nav-item.active {
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border-color: var(--color-accent-line);
+  box-shadow: 0 8px 24px -12px rgba(201, 154, 60, 0.6);
+}
+
+.nav-item.active .icon {
+  transform: translateY(-1px) scale(1.06);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .nav-item:hover:not(.active) {
+    color: var(--color-text);
+    background: rgba(255, 244, 225, 0.05);
+    border-color: transparent;
+  }
+}
+
+.content {
+  padding: 1.75rem 2rem 3rem calc(var(--rail-width) + 12px + 2rem);
+}
+
+.page {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* --- phone: top bar + tab bar ---------------------------------------------- */
+
+.topbar {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 20;
+  height: var(--topbar-height);
   display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  border-bottom: 1px solid var(--color-border);
-  /* Glass is justified here: real content (the games table or the board)
-     scrolls underneath this bar, so the blur has something to blur. */
-  background: rgba(27, 20, 15, 0.7);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  border-width: 0 0 1px;
+  border-radius: 0;
+  background: var(--glass-bg-strong);
 }
 
-.app-header h1 {
+.topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.wordmark {
+  font-family: var(--font-heading);
   font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
-.app-header .tagline {
-  color: var(--color-text-muted);
-  font-size: 0.85rem;
+.tabbar {
+  position: fixed;
+  left: 10px;
+  right: 10px;
+  bottom: calc(10px + var(--safe-bottom));
+  z-index: 20;
+  height: var(--tabbar-height);
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.25rem;
+  padding: 0.35rem;
+  border-radius: var(--radius-lg);
+  background: var(--glass-bg-strong);
 }
 
-.header-right {
-  margin-left: auto;
+.tabbar .nav-item {
+  padding: 0.35rem 0;
+  justify-content: center;
+}
+
+.shell-mobile .content {
+  /* Room at the bottom so the last thing on the page isn't hidden under the
+     tab bar (and the phone's home indicator). */
+  padding: 1rem 1rem calc(var(--tabbar-height) + 2rem + var(--safe-bottom));
+}
+
+/* Inside a game on a phone: the viewer brings its own top and bottom bars. */
+.shell-mobile .content.content-viewer {
+  padding: 0 0 calc(var(--tabbar-height) + 1.5rem + var(--safe-bottom));
+}
+
+/* --- account --------------------------------------------------------------- */
+
+.account {
+  position: relative;
+}
+
+.avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  padding: 0;
+  border-radius: 50%;
+  font-family: var(--font-heading);
+  font-weight: 600;
+  font-size: 1.05rem;
+  color: var(--color-accent);
+  background: var(--color-accent-soft);
+  border: 1px solid var(--color-accent-line);
+}
+
+.account-menu {
+  position: absolute;
+  z-index: 40;
+  min-width: 13rem;
+  padding: 0.85rem;
+  border-radius: var(--radius-md);
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  background: var(--glass-bg-strong);
+  animation: rise var(--dur) var(--ease-out) both;
+}
+
+/* In the rail the menu opens to the right of the avatar; in the top bar it
+   drops down, aligned to the right edge so it never runs off screen. */
+.account-menu-rail {
+  left: calc(100% + 14px);
+  bottom: 0;
+}
+
+.account-menu-topbar {
+  right: 0;
+  top: calc(100% + 10px);
+}
+
+.account-name {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.account-signout {
   display: flex;
   align-items: center;
-  align-self: center;
-  gap: 1rem;
-  /* Allowed to wrap: the nav labels change from page to page and the
-     Google button has a fixed width of its own, so on a phone the row can
-     outgrow the screen. It did, on the Blunders page, by 112px. */
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  min-width: 0;
+  gap: 0.5rem;
+  justify-content: flex-start;
+  padding: 0.5rem 0.4rem;
+  margin: 0 -0.4rem;
 }
 
-.header-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+/* --- page headers (shared by every screen) ---------------------------------- */
+
+.page-header {
+  margin-bottom: 1.5rem;
 }
 
-.signed-in-as {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
+.page-header h1 {
+  font-size: clamp(1.7rem, 3.2vw, 2.4rem);
+  font-weight: 600;
+  margin: 0.35rem 0 0.4rem;
+}
+
+.page-header p {
+  margin: 0;
+  max-width: 62ch;
   color: var(--color-text-muted);
 }
 
-.app-main {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 1.5rem;
-}
-
-.app-main > .time-class-tabs {
-  margin-bottom: 1rem;
-}
-
-@media (max-width: 480px) {
-  .app-header {
-    padding: 0.75rem 1rem;
-  }
-
-  /* The tagline is nice-to-have on a wide header; on a phone, the app name
-     and the tilt-findings button are the two things worth the space. */
-  .app-header .tagline {
-    display: none;
-  }
-
-  /* Two rows on a phone: the app name with sign-in beside it, then the nav
-     on a full-width line of its own. Letting the whole right-hand group
-     wrap as one block worked but took three rows (142px of sticky header,
-     a sixth of the screen); `display: contents` lets its two halves be
-     placed separately while the markup stays as it is on desktop. */
-  .app-header {
-    flex-wrap: wrap;
-    align-items: center;
-    row-gap: 0.5rem;
-  }
-
-  .header-right {
-    display: contents;
-  }
-
-  .auth-slot {
-    order: 1;
-    margin-left: auto;
-  }
-
-  .header-nav {
-    order: 2;
-    flex-basis: 100%;
-  }
-
-  .app-main {
-    padding: 1rem;
-  }
+.shell-mobile .page-header {
+  margin-bottom: 1.1rem;
 }

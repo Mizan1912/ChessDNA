@@ -96,7 +96,9 @@ function book() {
   );
 }
 
-export default function MoveBadge({ label }) {
+// `inline`: the same medal sitting in a line of text (the verdict under the
+// board) rather than pinned to the corner of a board square.
+export default function MoveBadge({ label, inline = false }) {
   const meta = LABELS[label];
   const face = FACES[label];
   if (!meta || !face) return null;
@@ -104,7 +106,7 @@ export default function MoveBadge({ label }) {
   const gradientId = `badge-grad-${label}`;
   return (
     <svg
-      className="move-badge"
+      className={inline ? "move-badge-inline" : "move-badge"}
       viewBox="0 0 24 24"
       role="img"
       aria-label={meta.name}
