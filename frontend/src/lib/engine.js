@@ -84,6 +84,42 @@ export class Engine {
     this.#send(`setoption name MultiPV value ${count}`);
   }
 
+  // Wipes the engine's memory of positions it has already searched (its
+  // "hash table"), so the next game is analysed as if it were the first.
+  //
+  // Without this, results depended on ORDER. Stockfish reuses what it
+  // learned in earlier searches, which is normally a speed-up — but it means
+  // a fixed-depth search of the same position can land on a slightly
+  // different number depending on what was analysed before it. Measured on 50
+  // real games: 112 mistakes scanned oldest-first, 120 newest-first, with 30
+  // moments flagged in only one of the two orders. Anything that COUNTS
+  // mistakes (Phase 5's "3x your peers") has to give the same answer for the
+  // same games every time. See decision.md D-049.
+  //
+  // Goes through the same queue as evaluate(), so it can never land in the
+  // middle of a search.
+  newGame() {
+    const result = this.#queue.then(() => this.#newGameNow());
+    this.#queue = result.catch(() => {});
+    return result;
+  }
+
+  async #newGameNow() {
+    await this.start();
+    return new Promise((resolve) => {
+      // "ucinewgame" has no reply of its own; "isready" -> "readyok" is how
+      // UCI confirms the engine has finished whatever it was told to do.
+      this.#pendingLineHandler = (line) => {
+        if (line === "readyok") {
+          this.#pendingLineHandler = null;
+          resolve();
+        }
+      };
+      this.#send("ucinewgame");
+      this.#send("isready");
+    });
+  }
+
   // Evaluates one position. Resolves with { scoreCp, bestMove, lines }, where
   // every score is from White's point of view (positive = White better), and
   // `lines` holds the top `multiPv` candidate moves, best first.
@@ -113,14 +149,21 @@ export class Engine {
         //   info depth 12 ... multipv 2 ... score mate 3 ... pv ...
         const cpMatch = line.match(/score cp (-?\d+)/);
         const mateMatch = line.match(/score mate (-?\d+)/);
-        const pvMatch = line.match(/ pv (\S+)/);
+        // The whole principal variation — the line the engine expects both
+        // sides to play from here — not just its first move. The Phase 5
+        // tags need it: "the engine's best line wins the piece", "the best
+        // line mates on the back rank" are claims about a sequence, and
+        // can't be checked from a single move. `pv` is always the last field
+        // on the line, so everything after it is the sequence.
+        const pv = line.match(/ pv (.+)$/)?.[1].trim().split(/\s+/) ?? [];
 
         if (cpMatch || mateMatch) {
           const rank = Number(line.match(/multipv (\d+)/)?.[1] ?? 1);
           const raw = mateMatch ? mateToCentipawns(Number(mateMatch[1])) : Number(cpMatch[1]);
           bestByRank.set(rank, {
             scoreCp: flip ? -raw : raw,
-            move: pvMatch?.[1] ?? null,
+            move: pv[0] ?? null,
+            pv,
             isMate: Boolean(mateMatch),
           });
         }
@@ -135,6 +178,7 @@ export class Engine {
           resolve({
             scoreCp: lines[0]?.scoreCp ?? 0,
             bestMove: bestMoveMatch[1],
+            pv: lines[0]?.pv ?? [], // the best line, in UCI, starting with bestMove
             lines,
           });
         }

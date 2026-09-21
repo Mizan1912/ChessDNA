@@ -6,6 +6,130 @@ here.
 
 ---
 
+## D-050 — On a phone, the header wraps into two rows
+Date: 2026-09-21
+Phase: 5 (found while checking the Blunders page on mobile)
+Decided by: assistant
+
+What: the header was one row that was never allowed to wrap. On the Blunders page at 390px, the nav
+buttons plus the fixed-width Google sign-in button pushed the sign-in button **112px off the right
+edge** — horizontal scrolling on a phone, live on the deployed site. It predates Phase 5; the games
+list happened not to trigger it because its nav labels are shorter.
+
+Letting the right-hand group wrap as one block fixed the overflow but stacked three rows (142px of
+sticky header, a sixth of a phone screen). Final version: under 480px, `.header-right` becomes
+`display: contents`, so its two halves can be placed independently — the sign-in button sits beside
+the app name, and the nav takes a full-width row beneath. 99px, two rows. Desktop markup and layout
+are unchanged (59px, one row).
+
+Verified: 0px overflow on all four pages (games list, tilt, clock, blunders) at both 390px and 1300px.
+
+Affects: `App.css`.
+
+---
+
+## D-049 — The engine forgets everything between games, so results don't depend on order
+Date: 2026-09-21
+Phase: 5
+Decided by: assistant
+
+What: found because Phase 5 started counting. The Blunders page reported **120** mistakes for
+50 games; a direct scan of the same 50 found **112**. The difference was order: the page scans newest
+first, the script scanned oldest first. Measured directly — same games, both orders, no other change:
+112 vs 120, with **30 moments flagged in only one of the two orders.**
+
+Cause: Stockfish keeps a table of positions it has already searched (the "hash") and reuses it. The
+engine was never told a new game had started, so that table carried over from game to game — and a
+fixed-depth search can land on a slightly different number depending on what's in it. Moves near the
+15-point threshold tipped one way or the other depending on which games came before them. In effect,
+whether a move counted as a blunder depended partly on *other* games.
+
+That was tolerable as a list of blunders to look at. It is not tolerable for anything that counts
+them: "3x your rating peers" has to be the same number every time for the same games, or it isn't a
+measurement.
+
+Fix: `Engine.newGame()` sends UCI's `ucinewgame` (and waits for `readyok`) through the same queue as
+every search, and the blunder scan calls it before each game. Each game is now analysed as though it
+were the first. The single-game review didn't need it — it already starts a fresh engine per game.
+
+Verified by rerunning the experiment: **115 and 115, zero moments differing between orders**, tag
+counts identical. Cost, measured head-to-head on the same games in the same order, alternating runs:
+78.3s / 79.1s with memory kept vs 78.8s / 79.6s cleared — about half a second per 50 games.
+
+Worth recording how that timing was nearly got wrong: the first comparison showed no difference in
+the counts either, because the test switch patched a different copy of the engine module than the one
+the scan was using (Vite's dev server serves an edited file under a new `?t=` address). Caught
+because the "old" arm gave 115 instead of the 112 the old code had produced three times. Redone
+against the right module: the old arm reproduced 112 exactly.
+
+Affects: `lib/engine.js`, `lib/blunderScan.js`.
+
+---
+
+## D-048 — The first two blind-spot tags: hanging piece and back rank
+Date: 2026-09-21
+Phase: 5
+Decided by: assistant, following the build doc ("do the tags one at a time, starting with hanging
+piece and back rank")
+
+What: `lib/mistakeTags.js` — the Feature 1 tag list, as plain chess.js logic, starting with the two
+the doc names. Each blunder the scan finds now carries `tags`: zero or more of
+`{ tag, squares, detail }`. `squares` is there for the evidence rule ("highlighted square — the piece
+that hung, the mating square, whatever the tag points at"). Shown on the Blunders page as a
+**Pattern** column, separate from the existing "Why" column: "Why" is the sentence you read, a pattern
+is what gets counted across games.
+
+To check the rules against a *sequence* of moves ("the engine's best line wins it"), the engine now
+returns its whole principal variation (`pv`), not just the first move. Additive — `move` and
+`bestMove` are unchanged. The scan stores it as `refutationLine`.
+
+**Hanging piece** — doc: "after the played move, a piece of the player is attacked and undefended,
+and the engine's best line wins it." Readings taken:
+- "piece" = knight or better. A loose pawn is rarely why a move was a mistake (same line
+  `explainBlunder.js` already draws).
+- "undefended" = zero defenders. A defended queen attacked by a pawn is lost too, but that's a
+  different mistake, closer to "trade blunder"; folding it in would blur this tag.
+- "wins it" = captured within the opponent's first three moves (5 plies — the doc puts lines longer
+  than the immediate refutation out of scope), and not simply traded back on the next move. The piece
+  is tracked if the player moves it before it's taken.
+
+**Back rank** — doc: "best line delivers mate or wins material on the player's first rank while their
+king has no pawn escape."
+- "No pawn escape" = king on its back rank, and every square directly in front of it is blocked by its
+  own pieces or covered by the opponent.
+- Mate branch: the engine's line ends in checkmate, delivered on the back rank.
+- Material branch: early in the line an enemy **rook or queen** lands on the back rank **with check,
+  while the king is still on it**, and by the end of the line the opponent is up at least 2 points.
+
+The material branch was first written as "any check **or capture** landing on the back rank". Real
+games showed that was wrong: early on, nearly every king counts as "trapped" behind its own pieces,
+so a bishop capturing a queen on d8 (because a knight had moved off the diagonal) was tagged "back
+rank" when the king had nothing to do with it. Tightened to a rook or queen, giving check, along the
+rank. That exact position is now a regression test.
+
+**Validation:** 13 tests (`npm test` in `/frontend`, Node's built-in runner, no dependency),
+including a "must NOT fire" case for every rule — a tag that fires on everything tells the user
+nothing. Then run over 50 real games (the user's own, rated 203-624): 112 mistakes, 29 hanging-piece,
+3 back-rank before the fix, 2 after. After the fix, **exactly one moment's tags changed** — the false
+positive — and nothing else. Each remaining back-rank hit was checked by hand on the board, including
+a queenside one (Qb8#, king on c8 walled in by its own c7 pawn and d7 bishop). The 36 "loses
+material" moments with no tag were checked too: pawns (excluded by design), even trades that went
+wrong later, and a knight check that then picks up a bishop — work for the trade-blunder and fork tags
+still to come, not misses.
+
+**Also fixed, in `explainBlunder.js` (Phase 4):** its "hangs a piece" sentence said "leaves your rook
+on h8 **undefended**" for pieces that were in fact defended but attacked by something cheaper — a
+false specific claim, which that file's own header says never to make. It now says "attacked by a
+bishop, which is worth less than it" in that case, and "undefended" only when there are no defenders.
+Found because the new tag (strict: zero defenders) disagreed with the old sentence on exactly those
+two positions.
+
+Affects: `lib/mistakeTags.js` (new), `tests/mistakeTags.test.mjs` (new), `lib/engine.js`,
+`lib/blunderScan.js`, `lib/explainBlunder.js`, `pages/BlundersPage.jsx` + `.css`, `package.json`
+(`npm test`).
+
+---
+
 ## D-047 — Keep the backend awake with an uptime monitor, rather than changing the code
 Date: 2026-09-21
 Phase: 0 (deploy)

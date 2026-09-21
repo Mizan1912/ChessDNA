@@ -29,10 +29,17 @@
   align-items: center;
   align-self: center;
   gap: 1rem;
+  /* Allowed to wrap: the nav labels change from page to page and the
+     Google button has a fixed width of its own, so on a phone the row can
+     outgrow the screen. It did, on the Blunders page, by 112px. */
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 .header-nav {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
 }
 
@@ -63,6 +70,31 @@
      and the tilt-findings button are the two things worth the space. */
   .app-header .tagline {
     display: none;
+  }
+
+  /* Two rows on a phone: the app name with sign-in beside it, then the nav
+     on a full-width line of its own. Letting the whole right-hand group
+     wrap as one block worked but took three rows (142px of sticky header,
+     a sixth of the screen); `display: contents` lets its two halves be
+     placed separately while the markup stays as it is on desktop. */
+  .app-header {
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 0.5rem;
+  }
+
+  .header-right {
+    display: contents;
+  }
+
+  .auth-slot {
+    order: 1;
+    margin-left: auto;
+  }
+
+  .header-nav {
+    order: 2;
+    flex-basis: 100%;
   }
 
   .app-main {

@@ -66,3 +66,20 @@
 .blunders-table tbody tr:hover .lost-cell {
   color: var(--color-accent);
 }
+
+/* Feature 1 pattern tags (Phase 5). Quiet outlined chips rather than filled
+   ones: the "Why" column is the sentence you read; these are the labels
+   that get counted, and several can sit side by side in one cell. */
+.pattern-cell {
+  white-space: nowrap;
+}
+
+.pattern-chip {
+  display: inline-block;
+  padding: 0.1rem 0.45rem;
+  margin-right: 0.3rem;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  font-size: 0.75rem;
+  color: var(--color-text);
+}

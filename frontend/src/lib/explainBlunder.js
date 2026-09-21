@@ -72,18 +72,32 @@ function findHangingPiece(fenAfter, playerColorLetter) {
 
         // Undefended entirely, or defended but the cheapest attacker is
         // worth less than the piece — either way it loses material.
-        const cheapestAttacker = Math.min(
-          ...attackers.map((sq) => PIECE_VALUES[board.get(sq)?.type] ?? 99)
+        const cheapestAttackerSquare = attackers.reduce((best, sq) =>
+          (PIECE_VALUES[board.get(sq)?.type] ?? 99) < (PIECE_VALUES[board.get(best)?.type] ?? 99) ? sq : best
         );
+        const cheapestAttacker = board.get(cheapestAttackerSquare)?.type;
         const pieceValue = PIECE_VALUES[square.type];
-        const reallyHanging = defenders.length === 0 || cheapestAttacker < pieceValue;
+        const undefended = defenders.length === 0;
+        const reallyHanging = undefended || PIECE_VALUES[cheapestAttacker] < pieceValue;
         if (!reallyHanging) continue;
 
-        if (!worst || pieceValue > PIECE_VALUES[worst.type]) worst = square;
+        if (!worst || pieceValue > PIECE_VALUES[worst.piece.type]) {
+          worst = { piece: square, undefended, attackerName: PIECE_NAMES[cheapestAttacker] };
+        }
       }
     }
 
-    return worst ? { pieceName: PIECE_NAMES[worst.type], square: worst.square } : null;
+    // `undefended` matters for the wording. A defended piece attacked by
+    // something cheaper is still lost, but calling it "undefended" is a
+    // specific claim that's false — the first version did exactly that.
+    return worst
+      ? {
+          pieceName: PIECE_NAMES[worst.piece.type],
+          square: worst.piece.square,
+          undefended: worst.undefended,
+          attackerName: worst.attackerName,
+        }
+      : null;
   } catch {
     return null;
   }
@@ -137,9 +151,12 @@ export function explainBlunder(blunder) {
 
   const hanging = findHangingPiece(blunder.fenAfter, playerColorLetter);
   if (hanging) {
+    const how = hanging.undefended
+      ? "undefended"
+      : `attacked by a ${hanging.attackerName}, which is worth less than it`;
     return {
       tag: "hangs-piece",
-      why: `${blunder.movePlayed} leaves your ${hanging.pieceName} on ${hanging.square} undefended.${instead}`,
+      why: `${blunder.movePlayed} leaves your ${hanging.pieceName} on ${hanging.square} ${how}.${instead}`,
       bestMoveSan,
       refutationSan,
     };

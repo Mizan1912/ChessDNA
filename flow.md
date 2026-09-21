@@ -57,8 +57,10 @@ researched.
    ("analysing game 7 of 50 — 12 blunders so far") and the tab stays fully usable, because the
    engine runs in a Web Worker rather than on the main thread. When it finishes: a table of every
    moment you threw the game away — move number, what you played, **why it was bad** ("Loses
-   material", "Allows mate", "Hangs a piece"), what the engine wanted instead, how much win chance
-   it cost, and how long you spent on it. Clicking any row opens that exact move on the board with
+   material", "Allows mate", "Hangs a piece"), which **pattern** it fits (Phase 5's blind-spot
+   tags — so far "Hanging piece" and "Back rank", several can apply at once), what the engine wanted
+   instead, how much win chance it cost, and how long you spent on it. The same games always give
+   the same results, whatever order they're scanned in. Clicking any row opens that exact move on the board with
    the full reason written out above it ("Qd4 loses your queen on d4 to Bxd4. The engine wanted
    Nf3."), and the move list scrolls itself to that move. Results stay put while you click through
    them — looking at one and coming back doesn't throw the scan away.
@@ -151,6 +153,8 @@ Phase 4.
 | `/frontend/src/lib/winPercent.js` | Converts centipawns to win percentage (Lichess's formula) — the measure blunders are actually judged by. |
 | `/frontend/src/lib/explainBlunder.js` | Works out *why* a move was bad (lost a piece / allowed mate / hung something) and writes it as a sentence. |
 | `/frontend/src/lib/moveLabels.js` | The Brilliant/Great/Book/Best/…/Blunder classification rules, and each label's glyph and colour. |
+| `/frontend/src/lib/mistakeTags.js` | Phase 5's blind-spot tags: what KIND of mistake each blunder was (hanging piece, back rank, …), with the squares involved. Pure chess.js, no engine. |
+| `/frontend/tests/mistakeTags.test.mjs` | Known positions for every tag rule, including ones where it must NOT fire. Run with `npm test` in `/frontend`. |
 | `/frontend/src/lib/openingBook.js` | 79 mainstream opening lines — what makes a move "Book". Deliberately small, so it under-fires rather than lying (D-041). |
 | `/frontend/src/components/ReviewSummary.jsx` + `.css` | The review scorecard: both players' accuracy, a count of every label each played, and the per-game rating estimate. |
 | `/frontend/src/components/PlayerStrip.jsx` + `.css` | One player's row above or below the board — name, rating, and their clock at the move you're looking at. |
@@ -213,7 +217,11 @@ Phase 4.
 - [x] Phase 4B — Move quality drawn on the board itself (D-044): a coloured medal on the square the
       piece landed on, both of the move's squares lit, and a green arrow showing the better move
       when there was one.
-- [ ] Phase 5 — Tagging and baseline
+- [ ] Phase 5 — Tagging and baseline. **In progress.** Done so far: 2 of the 10 tags (hanging piece,
+      back rank — D-048), with 13 tests (`npm test`) and a check against 50 real games; the engine's
+      full best line is now captured, which every tag needs; scan results no longer depend on the
+      order games are analysed in (D-049). Not yet: the other 8 tags, the baseline data, the "3x your
+      rating peers" comparison, and the findings page with thumbnails the evidence rule asks for.
 - [ ] Phase 6 — Repetition queue
 - [ ] Phase 7 — Opening fit
 - [ ] Phase 8 — Shadow self

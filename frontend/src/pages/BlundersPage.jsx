@@ -1,3 +1,4 @@
+import { TAGS } from "../lib/mistakeTags";
 import "./BlundersPage.css";
 
 // Roughly how long a scan takes, measured at depth 12 on real games (see
@@ -78,6 +79,7 @@ export default function BlundersPage({ games, scan: scanState, onBack, onOpenGam
                     <th>Move</th>
                     <th>Played</th>
                     <th>Why</th>
+                    <th>Pattern</th>
                     <th>Best was</th>
                     <th>Win chance lost</th>
                     <th>Time spent</th>
@@ -93,6 +95,17 @@ export default function BlundersPage({ games, scan: scanState, onBack, onOpenGam
                       <td>{blunder.moveNumber}</td>
                       <td>{blunder.movePlayed}</td>
                       <td className="why-cell">{TAG_LABELS[blunder.explanation?.tag] ?? "—"}</td>
+                      {/* The Feature 1 tags — what KIND of mistake, counted across
+                          games to find blind spots. Several can apply at once. */}
+                      <td className="pattern-cell">
+                        {blunder.tags?.length
+                          ? blunder.tags.map((t) => (
+                              <span key={t.tag} className="pattern-chip" title={TAGS[t.tag]?.blurb}>
+                                {TAGS[t.tag]?.name ?? t.tag}
+                              </span>
+                            ))
+                          : "—"}
+                      </td>
                       <td>{blunder.explanation?.bestMoveSan ?? "—"}</td>
                       <td className="lost-cell">−{Math.round(blunder.lostWinPercent)}%</td>
                       <td>

@@ -494,6 +494,46 @@ and the game's figure blends the ordinary average with a harmonic mean, which is
 average that gets dragged down hard by your worst moments. That's why one real blunder now costs
 you visibly, where before it vanished into the crowd.
 
+## 4l. Sorting mistakes into kinds (Phase 5's tags)
+
+**Files involved:** `lib/mistakeTags.js`, `tests/mistakeTags.test.mjs`, `lib/blunderScan.js`
+
+The blunder scan finds the moments you went wrong. This step asks what *kind* of wrong each one was,
+because a kind is something you can count. "You blundered 115 times" tells you nothing; "29 of those
+were pieces you left hanging" is a habit.
+
+Each rule is ordinary chess logic, with no engine judgement involved. The engine's only part is
+supplying its "best line" — the sequence of moves it expects both sides to play next — and the rules
+then check that line on a real board. That's why the engine had to start handing over its whole
+line instead of just its first move: "your knight was hanging" isn't proven by the knight being
+loose; it's proven by the opponent's best line actually taking it.
+
+**Hanging piece** looks at the position right after your move for any of your pieces (knight or
+bigger) that is attacked and has *nothing* defending it, then plays the opponent's best line forward
+to see whether it really gets taken — and not just traded straight back.
+
+**Back rank** checks whether your king is stuck on its home row with no square to step up to, and
+whether the opponent's best line either mates you there or wins material with a rook or queen
+checking along that row.
+
+Each tag also records the squares it's about, so the board can highlight the piece that hung or the
+square the mate lands on.
+
+**How these get tested.** Every rule has positions where the answer is known in advance — including,
+for every rule, positions where it must *not* fire. That second half matters more than it sounds: a
+rule that fires on everything scores perfectly on the "should fire" tests and is useless. The back
+rank rule's first version was exactly that kind of mistake. Tested on real games, it tagged a bishop
+simply picking off a queen as "back rank", because early in a game almost every king is technically
+walled in by its own pawns. That real position is now one of the tests, so the mistake can't come
+back quietly.
+
+**Why the same games now always give the same answer.** Stockfish remembers positions it has already
+analysed and reuses that memory to go faster. The app never told it when one game ended and the next
+began, so its memory of earlier games leaked into later ones and could nudge a borderline move over
+or under the blunder line. Scanning the same 50 games in two different orders gave 112 blunders one
+way and 120 the other. Now the engine is told "new game" before each one and starts with a clean
+memory: same games, same answer, in any order, for about half a second of extra time per 50 games.
+
 ## 5. Showing evidence for a finding
 
 **Files involved:** `components/GameEvidenceList.jsx`

@@ -3,6 +3,7 @@ import { pgnToMoves } from "./pgnToMoves.js";
 import { pgnToClockMoves } from "./clockData.js";
 import { winPercentLost } from "./winPercent.js";
 import { explainBlunder, uciToSan } from "./explainBlunder.js";
+import { tagMistake } from "./mistakeTags.js";
 
 // See decision.md D-031 (where these get tuned) and D-032 (why the main
 // threshold is win-percentage rather than the spec's raw centipawns).
@@ -68,6 +69,10 @@ async function scanOneGame(engine, game) {
       // readable notation and works out WHY the move was bad.
       engineBestMove: before.bestMove, // what the player should have played
       refutationMove: after.bestMove, // how the opponent punishes what they did play
+      // The whole punishing line, not just its first move — the Phase 5 tags
+      // are claims about a sequence ("the best line wins the knight"), and
+      // the evidence rule wants the user able to step through it.
+      refutationLine: after.pv,
       evalBefore,
       evalAfter,
       lostWinPercent,
@@ -78,6 +83,13 @@ async function scanOneGame(engine, game) {
     // Worked out once here rather than on every render — it's the same
     // answer every time, and the viewer wants it too.
     blunder.explanation = explainBlunder(blunder);
+    // What KIND of mistake it was (hanging piece, back rank, …) — the
+    // Feature 1 tags, counted across games to find blind spots. D-048.
+    blunder.tags = tagMistake({
+      fenAfter: move.fenAfter,
+      refutationLine: after.pv,
+      playerColour: playerColorLetter,
+    });
     blunders.push(blunder);
   }
 
@@ -98,6 +110,9 @@ export async function scanGamesForBlunders(games, { onProgress, isCancelled } = 
       if (isCancelled?.()) break;
 
       try {
+        // Each game analysed from a clean slate, so a game's mistakes don't
+        // depend on which games happened to be scanned before it (D-049).
+        await engine.newGame();
         allBlunders.push(...(await scanOneGame(engine, games[i])));
       } catch {
         // One unparseable PGN shouldn't kill a 50-game scan.
