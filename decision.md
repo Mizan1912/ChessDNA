@@ -6,6 +6,27 @@ here.
 
 ---
 
+## D-053 — On a phone, the move explanation sits above the board
+Date: 2026-09-21
+Phase: between 5 and 6
+Decided by: user ("on mobile I'm not able to see the text which defines the move")
+
+What: in the phone viewer the coach card (verdict, eval chip, explanation) moved from under the move
+strip to directly under the header, above the board. The card has a fixed height (headline + three
+lines) so the board doesn't jump as explanations change length; a rare longer one scrolls inside the
+card. The board is now sized from the screen height too: `min(100%, max(240px, 100svh - 430px))`,
+where ~430px is everything else on screen (header, card, both player strips, eval bar, move strip,
+pinned control bar).
+Why: under the board, the explanation fell behind the pinned control bar, so you had to scroll after
+every step to read it. Measured at 390×844, 375×667, 412×915 and 360×740: header, card, board, move
+strip and controls all fit with no page scroll, and the board's position doesn't move while stepping.
+Alternatives considered: keep it below and shrink the board only (the text still lands under the
+control bar on short phones); a bottom sheet (one more thing to open on every move).
+Affects: `GameViewerPage.jsx` (phone render order), `GameViewerPage.css` (phone section). Laptop
+layout unchanged. Cost: on a short phone (667px tall) the board drops to 240px wide.
+
+---
+
 ## D-052 — Every move explained; Brilliant no longer mistakes trades for sacrifices; one scroll on Games
 Date: 2026-09-21
 Phase: between 5 and 6

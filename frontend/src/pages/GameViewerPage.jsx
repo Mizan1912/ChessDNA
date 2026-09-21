@@ -522,6 +522,11 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
 
       <div className="viewer-layout">
         <div className="board-column">
+          {/* On a phone the explanation sits ABOVE the board: underneath, it
+              fell below the pinned control bar and couldn't be read while
+              stepping through moves. */}
+          {isMobile && (exploringBanner || <MoveVerdict labelled={currentLabel} explanation={explanation} evalAfterCp={currentEvalAfter} />)}
+
           {/* Opponent on top, you underneath, each with their clock — the
               arrangement of a real board, and of every chess site. The
               evaluation bar stays level with the board itself rather than
@@ -548,10 +553,7 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
           </div>
 
           {isMobile && (
-            <>
-              <MoveStrip moves={moves} labelsByPly={labelsByPly} activeIndex={exploring ? null : moveIndex} onSelect={goTo} listRef={listRef} />
-              {exploringBanner || <MoveVerdict labelled={currentLabel} explanation={explanation} evalAfterCp={currentEvalAfter} />}
-            </>
+            <MoveStrip moves={moves} labelsByPly={labelsByPly} activeIndex={exploring ? null : moveIndex} onSelect={goTo} listRef={listRef} />
           )}
         </div>
 

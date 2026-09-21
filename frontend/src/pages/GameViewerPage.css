@@ -533,6 +533,18 @@
   padding: 0 0.6rem;
 }
 
+/* The board is sized from the screen's HEIGHT as well as its width, so the
+   explanation above it, both clocks, the move strip and the pinned controls
+   all fit on one screen. ~430px is everything that isn't the board (header,
+   explanation, two player strips, eval bar, move strip, control bar). On a
+   tall phone the width wins and nothing changes; on a short one the board
+   gives way instead of the explanation. svh = the height with the browser's
+   toolbars showing, so it never under-counts. */
+.viewer-mobile .board-stack {
+  width: min(100%, max(240px, calc(100svh - 430px)));
+  margin: 0 auto;
+}
+
 .viewer-mobile .board-panel {
   width: 100%;
   padding: 0.25rem;
@@ -591,8 +603,33 @@
   color: #1b140f;
 }
 
+/* Above the board on a phone. A fixed height (room for the headline and
+   three lines of explanation) so the board doesn't jump up and down as the
+   explanations change length while you step through; the rare longer one
+   scrolls inside the card. */
 .viewer-mobile .move-verdict {
-  margin-bottom: 0.9rem;
+  height: 6.9rem;
+  margin-bottom: 0.4rem;
+  padding: 0.5rem 0.7rem 0.55rem;
+  gap: 0.3rem;
+  overflow-y: auto;
+}
+
+.viewer-mobile .move-verdict.placeholder {
+  height: 6.9rem;
+}
+
+.viewer-mobile .verdict-top {
+  gap: 0.5rem;
+}
+
+.viewer-mobile .verdict-move {
+  font-size: 1rem;
+}
+
+.viewer-mobile .verdict-explain {
+  font-size: 0.84rem;
+  line-height: 1.45 !important;
 }
 
 .mobile-review {
