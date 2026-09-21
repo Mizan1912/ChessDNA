@@ -5,7 +5,7 @@ import { Engine } from "../lib/engine";
 // as you step through moves or play your own. Deliberately shallow — this
 // needs to feel instant while clicking through a game, not be authoritative.
 // The careful per-move judgements come from the full review instead.
-const LIVE_DEPTH = 12;
+const LIVE_DEPTH = 15;
 
 export function useLiveEval(fen, enabled = true) {
   const [scoreCp, setScoreCp] = useState(null);

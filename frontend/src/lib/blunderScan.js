@@ -14,7 +14,7 @@ import { tagMistake } from "./mistakeTags.js";
 const BLUNDER_THRESHOLD_WIN_PERCENT = 15;
 const DECIDED_POSITION_CP = 600; // past this, the game is already won/lost — a "blunder" there means nothing
 const BOOK_MOVES_SKIPPED = 8; // full moves of opening theory, where a "mistake" is usually just book
-const SCAN_DEPTH = 12; // bulk-scan depth: fast enough for 50 games, deep enough to spot real errors
+const SCAN_DEPTH = 14; // bulk-scan depth: fast enough for 50 games, deep enough to spot real errors
 
 // Scores from engine.js are always from White's point of view. Everything
 // below wants them from the PLAYER's point of view instead — "did this move

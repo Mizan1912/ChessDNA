@@ -16,7 +16,7 @@ import { uciToSan } from "./explainBlunder.js";
 // game — unusable. Depth 14 with 2 lines keeps the labels essentially the
 // same (the second line is only needed to spot an "only move") while landing
 // inside a tolerable wait. See decision.md D-034.
-const REVIEW_DEPTH = 14;
+const REVIEW_DEPTH = 18;
 const REVIEW_MULTI_PV = 2;
 
 // Evaluations come out of the engine from White's point of view. Labels care
