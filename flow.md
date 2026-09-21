@@ -9,7 +9,7 @@ researched.
 1. **Games list (`/`)** — a sticky header ("Chess DNA"). Once games are fetched, time-class tabs
    (All / Bullet / Blitz / Rapid / Daily, each with a count) appear right below the header — this
    selection is shared app-wide, not just a table filter (see point 3). Below that, a slim toolbar
-   with a Chess.com username field, a slider (3-100, step 10) for how many recent games to fetch,
+   with a Chess.com username field, a slider (1-100, step 1) for how many recent games to fetch,
    and a "Fetch games" button. Beside the toolbar and table sits a chess board: the starting
    position when idle, and the hovered game's final position when hovering a row. The table itself
    is a fixed-height scrolling box (not the whole page growing taller): date, opponent, result,
@@ -22,8 +22,10 @@ researched.
    line", with the bar following along, and a button to drop back into the real game. The **review
    starts automatically** on opening a game: an engine pass labelling every move — Brilliant, Great,
    Best, Excellent, Good, Inaccuracy, Mistake, Miss, Blunder — in the move list, with the current
-   move's verdict spelled out under the board ("Be3 is Good · best was d5"), plus accuracy for both
-   players and a rough "≈2236 level this game" strength estimate. Labels appear one at a time as
+   move's verdict spelled out under the board ("Be3 is Good · best was d5") and drawn on the board
+   itself as a medal on the square the piece landed on. A scorecard beside the moves counts every
+   label for both players, with accuracy and a per-game rating estimate. Both players' clocks sit
+   above and below the board. Labels appear one at a time as
    they're worked out rather than all at the end, and a game is only ever analysed once — finished
    reviews are saved in the browser, so reopening one shows everything in about a second instead of
    re-analysing for half a minute. Every move also shows its thinking time (e.g.
@@ -166,6 +168,7 @@ Phase 4.
 | `/server/jwt.js` | Signs/verifies our own session token (not Google's) — see D-028. |
 | `/server/auth.js` | Verifies a Google credential, upserts the `users` collection, issues the session cookie, `/api/me`, `requireAuth` middleware. |
 | `/server/profile.js` | Saves the signed-in user's Chess.com username. |
+| `/frontend/vercel.json` | Vercel build settings, and the rewrite that forwards `/api/*` to the backend so the whole app is one domain (D-045). |
 | `.env.example` / `.env` | Chess.com API base URL, Google Client ID, MongoDB URI, JWT secret, CORS origin, API base URL, server port. |
 | `decision.md` | Log of every real decision made on this project, newest first. |
 | `flow.md` | This file — current app state, rewritten each phase. |
@@ -176,7 +179,8 @@ Phase 4.
 - [x] Phase 0 — Setup: repo skeleton, `/frontend` scaffold, `.gitignore`, `.env.example`,
       `decision.md`, `flow.md`, `rnd.md` created. (The original `/api` placeholder from this phase
       was later removed — see D-027, backend became `/server` instead.)
-- [ ] Phase 0 — Deploy to Vercel (paused, see D-005 in `decision.md`)
+- [ ] Phase 0 — Deploy: in progress. Frontend on Vercel, backend on Render, one domain via a
+      `/api/*` rewrite — see D-045. Repo prep done; dashboards (Render, Vercel, Google, Atlas) next.
 - [x] Phase 1 — Chess.com: fetch games, list, game viewer with move-by-move playback, design system
 - [ ] Phase 1 — Lichess (parked, see D-011 in `decision.md`)
 - [x] Phase 2 — Tilt detector (Feature 2): sessions, break point, tilt chain, worst hour, evidence links

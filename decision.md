@@ -6,6 +6,64 @@ here.
 
 ---
 
+## D-045 — Deployment: two hosts, one domain
+Date: 2026-09-21
+Phase: 0 (the deploy step D-005 paused)
+Decided by: user, choosing between three shapes laid out in conversation
+
+What: Frontend on **Vercel**, backend on **Render**, and a rewrite rule in `frontend/vercel.json` so
+that `yoursite/api/*` is quietly forwarded to the backend. The browser only ever talks to one
+origin.
+
+Why this shape: the session cookie is `SameSite=Lax` (`server/auth.js`). On localhost the frontend
+and backend count as the same site; on two separate public domains they don't, and a `Lax` cookie is
+deliberately not sent on cross-site requests — sign-in would appear to succeed and then silently not
+stick. The rejected alternatives: switching the cookie to `SameSite=None` (works today, but relies on
+third-party cookies, which browsers keep restricting — Safari already blocks many), or having
+Express serve the built frontend itself (simplest, but on a free tier the *whole app* would sleep,
+so a cold visit stares at a blank page for ~50 seconds). With the rewrite, the auth code needs no
+changes at all, CORS stops mattering, and the static app stays on a CDN — only sign-in ever touches
+the sleep-prone backend. Everything else, analysis included, runs in the browser.
+
+Three code changes were needed, each a bug that would have surfaced only in production:
+
+1. **The server now reads `PORT` first** (`server/index.js`). It read only `SERVER_PORT`, but Render
+   (and Railway, Fly, Heroku) inject `PORT`, then health-check the port *they* chose. The server
+   would have bound 3001 and logged "listening" while the host marked the deploy dead. Verified by
+   booting with `PORT=3999` and hitting `/api/health` there.
+2. **`VITE_API_BASE_URL` of `/` now means "this same site"** (`frontend/src/lib/backendApi.js`). It
+   used `||`, under which an empty value counts as missing and quietly falls back to
+   `http://localhost:3001` — the live site would have tried to call the developer's laptop. Now `??`
+   (only a truly unset value means localhost), and trailing slashes are trimmed so `/` becomes the
+   empty prefix. `/` rather than an empty string because some hosts refuse to save an environment
+   variable with no value. All five cases checked: `/`, `""`, unset, the local URL, and the local
+   URL with a stray slash.
+3. **`frontend/vercel.json`** declares the install and build commands explicitly rather than relying
+   on detection, because `npm install` is load-bearing here: the Stockfish engine is gitignored and
+   only exists after the `postinstall` script copies it out of `node_modules`. If analysis silently
+   does nothing on the live site, that's the first thing to check.
+
+**A deliberate exception to "no hardcoding":** the backend's URL is written directly into
+`vercel.json`'s rewrite. Vercel does not substitute environment variables inside rewrite
+destinations, so there is no way to make it an env var. It isn't a secret — it's a public URL that
+every visitor's browser effectively reaches anyway — and this is the one place it lives.
+
+`.env.example` now documents what every variable becomes in production, including two that exist
+only there: `NODE_ENV=production` (which is what turns on the cookie's `Secure` flag — without it,
+browsers reject the cookie over HTTPS and sign-in silently doesn't stick) and a freshly generated
+`JWT_SECRET` rather than the local one.
+
+Before deploying, the MongoDB password must be rotated: it was pasted in plain text into a chat
+early in the project. Checked the repo, which is public: the password appears **nowhere** in git
+history, across every commit, so there is nothing to scrub there — rotation is about the chat, not
+the repo.
+
+Affects: `server/index.js`, `frontend/src/lib/backendApi.js`, `frontend/vercel.json` (new),
+`.env.example`. Supersedes the "deploy to Vercel serverless functions" assumption in D-005 (see
+D-027 for why the backend became Express).
+
+---
+
 ## D-044 — The move's verdict is drawn on the board, on the square it landed on
 Date: 2026-09-21
 Phase: 4B
