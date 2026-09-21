@@ -6,6 +6,43 @@ here.
 
 ---
 
+## D-047 — Keep the backend awake with an uptime monitor, rather than changing the code
+Date: 2026-09-21
+Phase: 0 (deploy)
+Decided by: user, choosing between a code fix and this
+
+The problem: `App.jsx` renders **nothing** until the session check (`/api/me`) answers — deliberately,
+so a returning signed-in user doesn't see the onboarding screen flash before their games replace it.
+But Render's free tier puts the backend to sleep after 15 minutes without traffic, and waking it takes
+up to ~50 seconds. So a first visitor after a quiet spell would stare at a blank page for that long.
+Found by rehearsing the production build, not by reasoning — and it contradicted an earlier claim in
+D-045 that only sign-in would ever feel the backend sleeping. That claim was wrong: the *first paint*
+waits on the backend too.
+
+What: an external uptime monitor requests `https://chessdna.onrender.com/api/health` every 5
+minutes, so the backend never goes idle long enough to sleep. That endpoint was chosen because it
+touches nothing — no database, no auth — so thousands of pings a month cost nothing downstream and
+never reach Atlas. It's pinged directly on Render rather than through the Vercel rewrite, so the pings
+don't count against Vercel's usage either. The monitor also emails when the backend is genuinely down,
+which nothing else in this project would have told anyone.
+
+Why not the code fix: rendering the app immediately and letting the session check finish in the
+background would remove the dependency entirely, but brings back the onboarding flash for returning
+users. The user chose to keep the code as it is.
+
+**Known limits, so they aren't a surprise later:**
+- The blank-page behaviour is still in the code. It's only hidden while the monitor keeps pinging. If
+  the monitor stops, is paused, or misses, cold visits go blank again.
+- Render's free tier allows 750 instance-hours a month per workspace. One service awake around the
+  clock uses ~744 of those. A **second** always-awake free service would run out partway through the
+  month.
+- Moving to a paid Render instance (which doesn't sleep) makes the monitor unnecessary for this
+  purpose, though it's still worth keeping for the down-alerts.
+
+Affects: nothing in the repo. It's an external service configured by hand.
+
+---
+
 ## D-046 — The server's start script no longer requires a .env file
 Date: 2026-09-21
 Phase: 0 (deploy)
