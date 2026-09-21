@@ -6,6 +6,35 @@ here.
 
 ---
 
+## D-046 — The server's start script no longer requires a .env file
+Date: 2026-09-21
+Phase: 0 (deploy)
+Decided by: assistant, found while writing up the Render steps
+
+What: `npm start` was `node --env-file=../.env index.js`. On Render there is no `.env` file —
+variables come from the dashboard — and Node's `--env-file` **refuses to start** when the file is
+missing (`../.env: not found`, exit code 9). The build would have succeeded and every start would
+have died, with a log line easy to misread as a config problem rather than a flag problem.
+
+Now `start` uses `--env-file-if-exists`, which loads the file when it's there (local `npm start`
+still works) and carries on without it when it isn't. `package.json` gains
+`"engines": { "node": ">=22.9.0" }`, the release that introduced that flag; Render reads `engines`
+to choose which Node to install, so this also stops a host defaulting to an older Node that would
+reject the flag outright.
+
+`dev` deliberately keeps the strict `--env-file`: on a developer's machine a missing `.env` is a
+mistake, and it should fail loudly rather than start half-configured.
+
+Verified by a full rehearsal rather than by reasoning: copied `/server` to a directory with no
+`.env` anywhere above it, supplied the variables as real environment variables the way a dashboard
+does, set `PORT=3997` and `NODE_ENV=production`, ran `npm start`. It logged
+`../.env not found. Continuing without it.`, listened on 3997, and answered `/api/health` (200) and
+`/api/me` (401, correctly).
+
+Affects: `server/package.json`.
+
+---
+
 ## D-045 — Deployment: two hosts, one domain
 Date: 2026-09-21
 Phase: 0 (the deploy step D-005 paused)
