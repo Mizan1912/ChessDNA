@@ -10,7 +10,8 @@ import PlayerStrip from "../components/PlayerStrip";
 import ReviewSummary from "../components/ReviewSummary";
 import MoveBadge from "../components/MoveBadge";
 import Icon from "../components/Icon";
-import { formatDuration } from "../lib/format";
+import { formatDuration, formatEval } from "../lib/format";
+import { explainMove } from "../lib/explainMove";
 import { useLiveEval } from "../hooks/useLiveEval";
 import { useGameReview } from "../hooks/useGameReview";
 import { useMediaQuery, MOBILE_QUERY } from "../hooks/useMediaQuery";
@@ -162,24 +163,28 @@ function BoardControls({ atStart, atEnd, onFirst, onPrev, onNext, onLast, onFlip
   );
 }
 
-// "Nd6 is a blunder · best was Kb3" — the current move's verdict, with the
-// verdict word as the thing your eye lands on.
-function MoveVerdict({ labelled }) {
+// The coach card: "h5 is excellent", the evaluation after it, and a short
+// explanation of WHY (lib/explainMove.js — every claim in it is checked on
+// the board). The verdict word is the thing your eye lands on.
+function MoveVerdict({ labelled, explanation, evalAfterCp }) {
   if (!labelled) return <div className="move-verdict placeholder" aria-hidden="true" />;
   const meta = LABELS[labelled.label];
   const [lead, word] = VERDICT_PHRASE[labelled.label] ?? ["is", meta.name.toLowerCase()];
+  const evalText = formatEval(evalAfterCp);
   return (
     <div className={`move-verdict ${meta.className}`} key={labelled.plyIndex}>
-      <MoveBadge label={labelled.label} inline />
-      <p>
-        <strong className="verdict-move">{labelled.san}</strong> {lead} <strong className="verdict-word">{word}</strong>
-        {labelled.bestMoveSan && !NO_BEST_MOVE_HINT.has(labelled.label) && (
-          <span className="verdict-best">
-            {" "}
-            · best was <strong>{labelled.bestMoveSan}</strong>
+      <div className="verdict-top">
+        <MoveBadge label={labelled.label} inline />
+        <p className="verdict-headline">
+          <strong className="verdict-move">{labelled.san}</strong> {lead} <strong className="verdict-word">{word}</strong>
+        </p>
+        {evalText && (
+          <span className={`eval-chip${evalAfterCp < 0 ? " black-better" : ""}`} title="Engine evaluation after this move (+ = White better)">
+            {evalText}
           </span>
         )}
-      </p>
+      </div>
+      {explanation && <p className="verdict-explain">{explanation}</p>}
     </div>
   );
 }
@@ -257,6 +262,37 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
   }, [review.review]);
 
   const currentLabel = !exploring && moveIndex >= 0 ? labelsByPly.get(moveIndex) : null;
+
+  // Why the current move earned its label — explained from the board and the
+  // engine's line, only once the review has labelled this move.
+  const currentEvalAfter = review.review?.evalAfterPly?.[moveIndex];
+  const explanation = useMemo(() => {
+    if (!currentLabel) return null;
+    const move = moves[moveIndex];
+    const evalBeforeCp = moveIndex === 0 ? review.review?.startingEval : review.review?.evalAfterPly?.[moveIndex - 1];
+    let previousMove = null;
+    if (moveIndex > 0) {
+      try {
+        previousMove = new Chess(moves[moveIndex - 1].fenBefore).move(moves[moveIndex - 1].san);
+      } catch {
+        previousMove = null;
+      }
+    }
+    return explainMove({
+      san: move.san,
+      color: move.color,
+      moveNumber: move.moveNumber,
+      fenBefore: move.fenBefore,
+      fenAfter: move.fenAfter,
+      label: currentLabel.label,
+      bestMoveSan: currentLabel.bestMoveSan,
+      replyLine: currentLabel.replyLine,
+      evalBeforeCp,
+      evalAfterCp: review.review?.evalAfterPly?.[moveIndex],
+      isYou: (move.color === "w") === (game.userColor === "white"),
+      previousMove,
+    });
+  }, [currentLabel, moveIndex, moves, review.review, game.userColor]);
 
   // --- what the board itself shows about the current move ---
   // The move you're looking at, its two squares lit, and its quality medal
@@ -514,7 +550,7 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
           {isMobile && (
             <>
               <MoveStrip moves={moves} labelsByPly={labelsByPly} activeIndex={exploring ? null : moveIndex} onSelect={goTo} listRef={listRef} />
-              {exploringBanner || <MoveVerdict labelled={currentLabel} />}
+              {exploringBanner || <MoveVerdict labelled={currentLabel} explanation={explanation} evalAfterCp={currentEvalAfter} />}
             </>
           )}
         </div>
@@ -528,7 +564,7 @@ export default function GameViewerPage({ game, onBack, initialMoveIndex = -1, no
           <section className="side-panel card">
             <div className="side-panel-inner">
               {reviewStatus}
-              {exploringBanner || <MoveVerdict labelled={currentLabel} />}
+              {exploringBanner || <MoveVerdict labelled={currentLabel} explanation={explanation} evalAfterCp={currentEvalAfter} />}
 
               <div className="panel-tabs" role="tablist">
                 <button role="tab" aria-selected={panelTab === "moves"} className={panelTab === "moves" ? "active" : ""} onClick={() => setPanelTab("moves")}>

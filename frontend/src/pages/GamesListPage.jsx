@@ -128,7 +128,7 @@ export default function GamesListPage({
   const loading = status === "loading";
 
   return (
-    <div className="games-page">
+    <div className={`games-page${games.length > 0 ? " fills-screen" : ""}`}>
       <header className="page-header">
         <span className="eyebrow">Chess DNA</span>
         <h1>

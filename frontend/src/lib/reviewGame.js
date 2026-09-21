@@ -178,6 +178,10 @@ export async function reviewGame(game, { onProgress, isCancelled } = {}) {
         // Kept in raw UCI as well as notation, because the board draws the
         // "you should have played this" arrow from the two squares.
         bestMoveUci: engineBestUci ?? null,
+        // The engine's expected continuation after this move, opponent first
+        // (UCI, a few plies). The move explanations read the punishment of a
+        // bad move, and "what happens next" after a good one, straight off it.
+        replyLine: (after.pv ?? []).slice(0, 6),
         from: move.from,
         to: move.to,
         winPercentLost: lost,

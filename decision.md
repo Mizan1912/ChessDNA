@@ -6,6 +6,50 @@ here.
 
 ---
 
+## D-052 — Every move explained; Brilliant no longer mistakes trades for sacrifices; one scroll on Games
+Date: 2026-09-21
+Phase: between 5 and 6
+Decided by: user (Chess.com's coach as the reference; "why is this whole page scrollable")
+
+**Move explanations** (`lib/explainMove.js`). Every reviewed move now gets a short explanation under
+its verdict, with the engine's evaluation beside it ("Rde8 is an inaccuracy −2.4 · Rde8 attacks the
+queen on e1. It costs them about 6% of their winning chances. Better was Qf4."). The rule is the same
+as `explainBlunder.js`: nothing is claimed unless it's checked. Sentences come only from what the move
+did (replayed in chess.js: captures, recaptures, check, castling, development, a new threat on an
+undefended or more valuable piece), what the label means (already verified by the classifier), and
+the engine's own line after the move. Reviews now store that line per move (`replyLine`, 6 plies).
+
+Checked by reading every explanation for all 64 moves of a real game, not just by tests. That read
+found three wrong claims, each now a regression test:
+- **Trades described as punishment** ("Ne4… walks into Nxe4, which takes their knight" — Black takes
+  straight back). A first fix looked one move ahead for a recapture; that then **hid a true claim**
+  (Nh5 Qxf3: the queens come off but the bishop stays lost). Final rule: count the material balance
+  across the engine's whole stored line, and only when the line ends on a quiet move. A piece is
+  named only if it is what's actually lost once the exchanges stop; otherwise "you lose material in
+  the exchanges that follow", or nothing.
+- **Half of an even trade called "undefended"** (Bxd6 before cxd6). Not named when the reply takes it.
+- "-0.0" as an evaluation, and "costs your side … its winning chances" → "costs you … your".
+
+**Brilliant was mislabelling trades (a D-039 bug).** The sacrifice test counted only what the player
+lost, never what they took, so every trade looked like a sacrifice: Rxd1+ Kxd1 was labelled
+Brilliant in a real game. It now measures the change in the material *balance*. That game now shows
+0 Brilliants; the move is a Great. Cache stamp → `v5`, so reviews saved under the old rule re-analyse.
+
+**One scroll on the Games screen.** On a laptop the page scrolled *and* the list scrolled inside it,
+with the browser's grey scrollbar. Now the screen fits the window exactly and only the list scrolls;
+on shorter screens the top tightens (sub-headline hidden, cards compacted, preview board sized to
+the window). Measured: page scroll 0px at 1918×975, 1536×864, 1440×900, 1366×768 and 1280×720. The
+fix hinged on one line — the list's panel was aligned to the top of its row, so it grew to full
+length and spilled out; it has to *stretch*. Scrollbars everywhere are now slim and gold.
+
+Verified: 43/43 unit tests, UI regression 12/12, 0px overflow on both sizes.
+
+Affects: `lib/explainMove.js` (new), `lib/moveLabels.js`, `lib/reviewGame.js`, `lib/reviewCache.js`,
+`lib/explainBlunder.js` (helpers exported), `lib/format.js`, `pages/GameViewerPage.*`,
+`pages/GamesListPage.*`, `App.css`, `index.css`, tests.
+
+---
+
 ## D-051 — The redesign: a real app shell, glass, emphasis, motion, and phones done properly
 Date: 2026-09-21
 Phase: between 5 and 6 (Phase 5's baseline put on hold by the user for this)

@@ -89,7 +89,9 @@
 }
 
 .content {
-  padding: 1.75rem 2rem 3rem calc(var(--rail-width) + 12px + 2rem);
+  /* 1.75rem top + 1.75rem bottom: the Games screen sizes itself to the
+     window minus exactly these two (GamesListPage.css). */
+  padding: 1.75rem 2rem 1.75rem calc(var(--rail-width) + 12px + 2rem);
 }
 
 .page {

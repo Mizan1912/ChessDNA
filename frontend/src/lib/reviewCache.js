@@ -18,7 +18,11 @@ const DB_VERSION = 1;
 // v3: reviewed moves now carry their from/to squares and the best move in
 // UCI, which the board needs for the medals and the suggestion arrow — a v2
 // record simply doesn't have those fields (D-044).
-export const REVIEW_FORMAT = "d14-mpv2-v3";
+// v4: each reviewed move carries `replyLine`, the engine's continuation after
+// it, which the per-move explanations need (D-052).
+// v5: Brilliant now measures a sacrifice as a change in the material BALANCE,
+// so an even trade can no longer be labelled Brilliant (D-052).
+export const REVIEW_FORMAT = "d14-mpv2-v5";
 
 function openDb() {
   return new Promise((resolve, reject) => {

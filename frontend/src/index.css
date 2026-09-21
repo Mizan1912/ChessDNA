@@ -90,6 +90,31 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Scrollbars in the app's own colours — a slim gold thumb on a clear track —
+   instead of the browser's default grey bar, which looked pasted on over
+   the glass (D-052). The standard properties cover Chrome, Edge and
+   Firefox; the -webkit- rules are for Safari, which doesn't support them. */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(201, 154, 60, 0.38) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: rgba(201, 154, 60, 0.32);
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background-clip: padding-box;
+}
+
 /* The lit room behind the glass. Glass over a flat colour just looks grey;
    it needs light and shade behind it to have anything to frost. Two warm
    glows and a vignette, on a fixed layer so they don't scroll or repaint.

@@ -70,9 +70,18 @@ function materialFor(fen, colorLetter) {
 // A sacrifice is material the player deliberately gave up and did NOT get
 // back. Measured after the opponent's best reply, because a move that hangs
 // a queen only to win it straight back isn't a sacrifice at all.
-function materialSacrificed(fenBefore, fenAfterOpponentReply, playerColorLetter) {
+//
+// It's the change in the material BALANCE — the player's material minus the
+// opponent's — not the player's material alone. The first version counted
+// only what the player lost, which made every trade look like a sacrifice:
+// Rxd1+ Kxd1 costs the player a rook, but it also took one, and it was
+// labelled Brilliant in a real game. An even trade leaves the balance where
+// it was; only a real sacrifice moves it. See decision.md D-052.
+export function materialSacrificed(fenBefore, fenAfterOpponentReply, playerColorLetter) {
   if (!fenAfterOpponentReply) return 0;
-  return materialFor(fenBefore, playerColorLetter) - materialFor(fenAfterOpponentReply, playerColorLetter);
+  const opponent = playerColorLetter === "w" ? "b" : "w";
+  const balance = (fen) => materialFor(fen, playerColorLetter) - materialFor(fen, opponent);
+  return balance(fenBefore) - balance(fenAfterOpponentReply);
 }
 
 /**

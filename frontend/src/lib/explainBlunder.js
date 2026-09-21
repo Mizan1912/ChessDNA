@@ -9,8 +9,8 @@ import { Chess } from "chess.js";
 // which is the same reasoning the build doc gives for keeping the
 // "Brilliant" label strict.
 
-const PIECE_NAMES = { p: "pawn", n: "knight", b: "bishop", r: "rook", q: "queen", k: "king" };
-const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
+export const PIECE_NAMES = { p: "pawn", n: "knight", b: "bishop", r: "rook", q: "queen", k: "king" };
+export const PIECE_VALUES = { p: 1, n: 3, b: 3, r: 5, q: 9, k: 100 };
 
 // Anything at or beyond this is the engine reporting a forced mate rather
 // than a material judgement (see engine.js's MATE_SCORE_CP).
@@ -54,7 +54,7 @@ function describeCapture(fenAfter, refutationUci) {
 // defended — "hanging" in the way a human means it. Pawns are ignored on
 // purpose: a loose pawn is almost never the real reason a move was bad, and
 // saying so out loud makes the explanation look silly.
-function findHangingPiece(fenAfter, playerColorLetter) {
+export function findHangingPiece(fenAfter, playerColorLetter) {
   const MINIMUM_WORTH_MENTIONING = PIECE_VALUES.n; // knight or better
   const opponent = playerColorLetter === "w" ? "b" : "w";
   try {
